@@ -200,12 +200,17 @@
 
           <!-- Form -->
           <form id="orderForm" class="mt-6 space-y-4" novalidate autocomplete="on">
+            <!-- (9) حقل مصيدة للبوتات: مخفي عن البشر وقارئات الشاشة -->
+            <div aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">
+              <label for="fWebsite">Website</label>
+              <input id="fWebsite" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </div>
             <h3 class="text-sm font-bold text-muted">بيانات التوصيل</h3>
 
             <div>
               <label for="fName" class="label">الاسم الكريم</label>
               <input id="fName" name="name" type="text" class="field" placeholder="مثال: محمد" autocomplete="name" />
-              <p class="err" data-err="name">فضلاً اكتب اسمك</p>
+              <p class="err" data-err="name">فضلاً اكتب اسمك بالحروف فقط (بدون أرقام أو رموز)</p>
             </div>
 
             <div>
@@ -321,6 +326,7 @@
   let cart = {};
   let sheetOpen = false;
   let submitting = false;
+  const PAGE_LOADED_AT = Date.now();   // (9) لقياس سرعة الإرسال: البشر يحتاجون أكثر من 3 ثوانٍ
 
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
@@ -501,17 +507,41 @@
     if (inputEl) inputEl.classList.toggle('is-invalid', show);
   }
 
+  // (6) الاسم: حروف فقط (عربي/إنجليزي) + مسافات، حرفان على الأقل، بدون أرقام أو رموز
+  function cleanName(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
+  function isValidName(n) {
+    if (!/^[\p{L}\p{M}\s'’\-.]+$/u.test(n)) return false;          // يرفض الأرقام والرموز والإيموجي
+    return (n.match(/\p{L}/gu) || []).length >= 2;
+  }
+
+  // (5) رفض الأرقام الوهمية: خانة مكررة أو أرقام متسلسلة
+  function isFakePhone(p) {
+    const tail = p.slice(2);                                         // الأرقام الثمانية بعد 05
+    if (/^(\d)\1{7}$/.test(tail)) return true;                       // 0500000000 / 0511111111
+    if (/^(\d)\1{8}$/.test(p.slice(1))) return true;                 // 0555555555
+    const seq = '0123456789012345', rev = '9876543210987654';
+    if (seq.includes(tail) || rev.includes(tail)) return true;       // 0512345678 / 0598765432
+    return false;
+  }
+
   function validate() {
-    const name = $('#fName').value.trim();
+    const name = cleanName($('#fName').value);
+    $('#fName').value = name;
     const phone = normalizePhone($('#fPhone').value);
+    const phoneFormatOk = /^05\d{8}$/.test(phone);
+    const phoneFake = phoneFormatOk && isFakePhone(phone);
+    const phoneErr = document.querySelector('[data-err="phone"]');
+    phoneErr.textContent = phoneFake
+      ? 'يبدو أن رقم الجوال غير صحيح، تأكد منه حتى نتواصل معك'
+      : 'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام';
     const districtSel = $('#fDistrict').value;
     const districtOther = $('#fDistrictOther').value.trim();
     const address = $('#fAddress').value.trim();
     const notes = $('#fNotes').value.trim();
 
     const checks = [
-      ['name', $('#fName'), name.length >= 2],
-      ['phone', $('#fPhone'), /^05\d{8}$/.test(phone)],
+      ['name', $('#fName'), isValidName(name)],
+      ['phone', $('#fPhone'), phoneFormatOk && !phoneFake],
       ['district', $('#fDistrict'), !!districtSel],
       ['districtOther', $('#fDistrictOther'), districtSel !== 'أخرى' || districtOther.length >= 2],
       ['address', $('#fAddress'), address.length >= 4]
@@ -618,7 +648,11 @@
     track('PURCHASE', { price: order.total, currency: 'SAR', transaction_id: order.orderId, number_items: order.itemsCount });
 
     // ننتظر الشيت بحد أقصى 1.5 ثانية حتى لا يتأخر العميل
-    await Promise.race([sendToSheet(order), new Promise(r => setTimeout(r, 1500))]);
+    // (9) مصيدة البوتات: الحقل المخفي ممتلئ أو الإرسال أسرع من 3 ثوانٍ → لا نحفظ في الشيت
+    const isBot = $('#fWebsite').value.trim() !== '' || (Date.now() - PAGE_LOADED_AT) < 3000;
+    if (!isBot) {
+      await Promise.race([sendToSheet(order), new Promise(r => setTimeout(r, 1500))]);
+    }
 
     store.set(CUSTOMER_KEY, { name: c.name, phone: c.phone, districtSel: c.districtSel, districtOther: c.districtOther, address: c.address });
 
