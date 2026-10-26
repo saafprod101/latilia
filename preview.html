@@ -69,7 +69,8 @@
       }
       .field.is-invalid { @apply border-red-500 ring-4 ring-red-500/10; }
       .label { @apply block text-sm font-bold text-ink mb-1.5; }
-      .err { @apply hidden text-xs text-red-600 mt-1.5 font-medium; }
+      .err { @apply text-xs text-red-600 mt-1.5 font-medium; display: none; }
+      .err.on { display: block; }
       .chip { @apply inline-flex items-center gap-1.5 bg-white/10 text-cream text-xs font-medium px-3 py-1.5 rounded-full border border-white/15; }
       .tab { @apply h-10 px-5 rounded-full text-sm font-bold border transition whitespace-nowrap; }
       .tab-active { @apply bg-sage text-white border-sage; }
@@ -163,7 +164,9 @@
     @keyframes shake { 10%,90% { transform: translateX(-1px); } 20%,80% { transform: translateX(3px); } 30%,50%,70% { transform: translateX(-6px); } 40%,60% { transform: translateX(6px); } }
     .shake { animation: shake .42s cubic-bezier(.36,.07,.19,.97) both; }
     @keyframes errIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-    .motion .err:not(.hidden) { animation: errIn .2s ease both; }
+    .motion .err.on { animation: errIn .22s ease both; }
+    /* شبكة أمان: بعد ظهور الصفحة بثوانٍ تُعرض كل العناصر حتى لو تعطلت الحركة في متصفح ما */
+    .motion-safe .hero-in > *, .motion-safe .bars.drop i { animation: none !important; opacity: 1 !important; transform: none !important; }
 
     /* 8) علامة ✓ عند اكتمال رقم الجوال */
     .phone-ok { position: absolute; left: 14px; top: 50%; width: 24px; height: 24px; border-radius: 999px; background: #606D39; color: #FFF0D8;
@@ -751,7 +754,7 @@
 
   function setError(key, inputEl, show) {
     const msg = document.querySelector(`[data-err="${key}"]`);
-    if (msg) msg.classList.toggle('hidden', !show);
+    if (msg) msg.classList.toggle('on', show);
     if (inputEl) inputEl.classList.toggle('is-invalid', show);
   }
 
@@ -1057,6 +1060,23 @@
   setTimeout(() => document.querySelectorAll('#menuGrid img').forEach(imgDone), 3500);
 
   initReveal();
+
+  // شبكة أمان للحركة: بعد 2.5 ثانية من ظهور الصفحة فعلياً، كل محتوى الشاشة يظهر مهما حدث
+  (function motionFailsafe() {
+    if (REDUCED) return;
+    const run = () => setTimeout(() => {
+      document.documentElement.classList.add('motion-safe');
+      document.querySelectorAll('#menuGrid .reveal:not(.in)').forEach(c => {
+        const r = c.getBoundingClientRect();
+        if (r.top < innerHeight && r.bottom > 0) c.classList.add('in');
+      });
+    }, 2500);
+    if (document.visibilityState === 'visible') run();
+    else document.addEventListener('visibilitychange', function f() {
+      if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); run(); }
+    });
+  })();
+
   moveTabInd($('#tabs .tab-active'), false);
   addEventListener('resize', () => moveTabInd($('#tabs .tab-active'), false));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => moveTabInd($('#tabs .tab-active'), false));
