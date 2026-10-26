@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#5D6D4E" />
+  <title>لتيليا | Latilia — باستا إيطالية فاخرة في الأحساء</title>
+  <meta name="description" content="لتيليا - مطعم إيطالي متخصص. باستا ولازانيا طازجة، اطلب الآن والتوصيل مجاني داخل الأحساء." />
+  <meta property="og:title" content="لتيليا | Latilia — اطلب الآن والتوصيل مجاني" />
+  <meta property="og:description" content="باستا إيطالية طازجة بنكهة أحسائية. التوصيل مجاني داخل الأحساء." />
+  <meta property="og:image" content="4.png" />
+  <meta property="og:type" content="website" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Preload hero dish images -->
+  <link rel="preload" as="image" href="4.png" />
+  <link rel="preload" as="image" href="2.jpg" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sage:  { DEFAULT: '#5D6D4E', dark: '#4E5F40', soft: '#E9EDE3', line: '#DCE2D3' },
+            rust:  { DEFAULT: '#D3643B', dark: '#C9572D', soft: '#FBEAE2' },
+            cream: { DEFAULT: '#FBF9F5', deep: '#F7F4EE' },
+            ink: '#1F241F',
+            muted: '#666666'
+          },
+          fontFamily: {
+            sans: ['Tajawal', 'system-ui', 'sans-serif'],
+            display: ['"Readex Pro"', 'Tajawal', 'sans-serif']
+          },
+          boxShadow: {
+            card: '0 1px 2px rgba(31,36,31,.04), 0 8px 24px -12px rgba(31,36,31,.18)',
+            bar: '0 -4px 30px -6px rgba(31,36,31,.35)'
+          }
+        }
+      }
+    };
+  </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .field {
+        @apply w-full h-12 rounded-2xl bg-white border border-sage-line px-4 text-ink placeholder:text-[#9AA094] outline-none transition focus:border-sage focus:ring-4 focus:ring-sage/15;
+      }
+      .field.is-invalid { @apply border-red-500 ring-4 ring-red-500/10; }
+      .label { @apply block text-sm font-bold text-ink mb-1.5; }
+      .err { @apply hidden text-xs text-red-600 mt-1.5 font-medium; }
+      .chip { @apply inline-flex items-center gap-1.5 bg-white/10 text-cream text-xs font-medium px-3 py-1.5 rounded-full border border-white/15; }
+      .tab { @apply h-10 px-5 rounded-full text-sm font-bold border transition whitespace-nowrap; }
+      .tab-active { @apply bg-sage text-white border-sage; }
+      .tab-idle { @apply bg-white text-ink border-sage-line; }
+    }
+  </style>
+  <style>
+    html { -webkit-tap-highlight-color: transparent; scroll-behavior: smooth; }
+    body { font-family: 'Tajawal', system-ui, sans-serif; }
+    input, select, textarea { font-size: 16px !important; } /* prevents iOS zoom */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { scrollbar-width: none; }
+
+    @keyframes drive { 0%,100% { transform: translateX(0) scaleX(-1); } 50% { transform: translateX(-5px) scaleX(-1); } }
+    .truck { animation: drive 1.1s ease-in-out infinite; display: inline-block; }
+
+    @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 100% { transform: scale(1); } }
+    .bump { animation: bump .35s ease; }
+
+    @keyframes pop { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .pop { animation: pop .22s ease-out; }
+
+    @keyframes shine { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .ribbon {
+      background: linear-gradient(90deg, #D3643B 0%, #E07A50 50%, #D3643B 100%);
+      background-size: 200% 100%;
+      animation: shine 4s linear infinite;
+    }
+    .hero-pattern {
+      background-color: #4E5F40;
+      background-image: radial-gradient(rgba(251,249,245,.09) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    #cartBar { transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
+    #sheet { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+    #sheetOverlay { transition: opacity .25s ease; }
+    .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body class="bg-cream text-ink antialiased min-h-screen">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="sticky top-0 z-30 bg-cream/90 backdrop-blur-md border-b border-sage-line/70">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5" aria-label="لتيليا">
+        <span class="w-10 h-10 rounded-full bg-sage grid place-items-center text-cream">
+          <i data-lucide="leaf" class="w-5 h-5"></i>
+        </span>
+        <span class="leading-none">
+          <span class="block font-display font-bold text-[22px] text-sage-dark">لتيليا</span>
+          <span class="block text-[10px] tracking-[.22em] text-muted mt-1" dir="ltr">LATILIA · ITALIAN</span>
+        </span>
+      </a>
+      <button data-action="checkout" class="relative w-11 h-11 rounded-full bg-white border border-sage-line grid place-items-center text-sage-dark" aria-label="السلة">
+        <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+        <span id="headerCount" class="hidden absolute -top-1 -left-1 min-w-[20px] h-5 px-1 rounded-full bg-rust text-white text-[11px] font-bold grid place-items-center">0</span>
+      </button>
+    </div>
+    <!-- Free delivery ribbon -->
+    <div class="ribbon text-white text-center text-[13px] font-bold py-2 px-4">
+      <span class="truck">🚚</span>
+      <span class="mx-1">التوصيل مجاني داخل الأحساء فقط</span>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 pb-36">
+
+    <!-- ===================== HERO ===================== -->
+    <section class="hero-pattern rounded-[28px] mt-4 px-5 py-6 text-cream relative overflow-hidden">
+      <div class="absolute -left-10 -bottom-12 w-40 h-40 rounded-full bg-rust/25 blur-2xl"></div>
+      <p class="text-[11px] tracking-[.25em] text-cream/70 mb-2" dir="ltr" style="text-align:right">SPECIALTY ITALIAN RESTAURANT</p>
+      <h1 class="font-display font-bold text-[26px] leading-[1.35]">باستا إيطالية طازجة<br/><span class="text-[#F4B79A]">بلمسة أحسائية</span> 🍝</h1>
+      <p class="text-cream/80 text-sm mt-2">اختر طبقك، وأكّد طلبك عبر واتساب خلال ثوانٍ.</p>
+      <div class="flex flex-wrap gap-2 mt-4">
+        <span class="chip"><i data-lucide="chef-hat" class="w-3.5 h-3.5"></i> تُحضّر طازجة</span>
+        <span class="chip"><i data-lucide="truck" class="w-3.5 h-3.5"></i> توصيل مجاني بالأحساء</span>
+        <span class="chip"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> تأكيد عبر واتساب</span>
+      </div>
+    </section>
+
+    <!-- ===================== FILTER TABS ===================== -->
+    <nav class="flex gap-2 overflow-x-auto no-scrollbar mt-5 -mx-4 px-4" id="tabs" aria-label="التصنيفات">
+      <button class="tab tab-active" data-filter="all">الكل</button>
+      <button class="tab tab-idle" data-filter="pasta">باستا 🍝</button>
+      <button class="tab tab-idle" data-filter="lasagna">لازانيا 🧀</button>
+    </nav>
+
+    <!-- ===================== PRODUCT GRID ===================== -->
+    <section id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" aria-label="قائمة الأطباق"></section>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="text-center mt-10 text-xs text-muted space-y-1">
+      <p class="font-display font-bold text-sage-dark text-base">لتيليا · Latilia</p>
+      <p>Specialty Italian Restaurant — الأحساء</p>
+      <p>التوصيل مجاني داخل الأحساء فقط</p>
+    </footer>
+  </main>
+
+  <!-- ===================== STICKY CART BAR ===================== -->
+  <div id="cartBar" class="fixed inset-x-0 bottom-0 z-40 px-3 pt-3 translate-y-[140%]" style="padding-bottom: calc(12px + env(safe-area-inset-bottom));">
+    <div class="max-w-xl mx-auto bg-sage-dark text-white rounded-[22px] shadow-bar p-2 flex items-center gap-2">
+      <button data-action="checkout" class="flex items-center gap-3 flex-1 ps-2 text-right">
+        <span id="barCount" class="w-10 h-10 rounded-full bg-white/15 grid place-items-center font-display font-bold text-lg">0</span>
+        <span class="leading-tight">
+          <span class="block text-[11px] text-white/70">المجموع</span>
+          <span class="block font-display font-bold text-lg"><span id="barTotal">0</span> <span class="text-sm font-medium">ر.س</span></span>
+        </span>
+      </button>
+      <button data-action="checkout" class="h-12 px-5 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.97] transition font-bold text-[15px] whitespace-nowrap">
+        إتمام الطلب 🛒
+      </button>
+    </div>
+  </div>
+
+  <!-- ===================== CHECKOUT BOTTOM SHEET ===================== -->
+  <div id="sheetOverlay" class="fixed inset-0 z-50 bg-ink/45 opacity-0 pointer-events-none" data-action="close-sheet"></div>
+
+  <section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" class="fixed inset-x-0 bottom-0 z-50 translate-y-full">
+    <div class="max-w-xl mx-auto bg-cream rounded-t-[28px] flex flex-col shadow-bar" style="max-height: 92dvh; max-height: 92vh;">
+      <!-- Handle + title -->
+      <div class="pt-2.5 pb-3 px-5 border-b border-sage-line/70 shrink-0">
+        <div class="w-11 h-1.5 rounded-full bg-sage-line mx-auto mb-3"></div>
+        <div class="flex items-center justify-between">
+          <h2 id="sheetTitle" class="font-display font-bold text-xl">إتمام الطلب</h2>
+          <button data-action="close-sheet" class="w-10 h-10 rounded-full bg-white border border-sage-line grid place-items-center" aria-label="إغلاق">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Checkout view -->
+      <div id="checkoutView" class="flex flex-col min-h-0 flex-1">
+        <div class="overflow-y-auto px-5 py-4 flex-1 min-h-0" id="sheetBody">
+          <!-- Order summary -->
+          <h3 class="text-sm font-bold text-muted mb-2">ملخص طلبك</h3>
+          <ul id="sheetItems" class="space-y-2.5"></ul>
+
+          <!-- Form -->
+          <form id="orderForm" class="mt-6 space-y-4" novalidate autocomplete="on">
+            <h3 class="text-sm font-bold text-muted">بيانات التوصيل</h3>
+
+            <div>
+              <label for="fName" class="label">الاسم الكريم</label>
+              <input id="fName" name="name" type="text" class="field" placeholder="مثال: محمد" autocomplete="name" />
+              <p class="err" data-err="name">فضلاً اكتب اسمك</p>
+            </div>
+
+            <div>
+              <label for="fPhone" class="label">رقم الجوال</label>
+              <input id="fPhone" name="phone" type="tel" inputmode="numeric" dir="ltr" maxlength="10" class="field text-right" placeholder="05xxxxxxxx" autocomplete="tel" />
+              <p class="err" data-err="phone">رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام</p>
+            </div>
+
+            <div>
+              <label for="fDistrict" class="label">الحي (داخل الأحساء)</label>
+              <select id="fDistrict" name="district" class="field appearance-none bg-no-repeat" style="background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2220%22 height=%2220%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%235D6D4E%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>'); background-position: left 14px center;">
+                <option value="">اختر الحي…</option>
+              </select>
+              <p class="err" data-err="district">فضلاً اختر الحي</p>
+            </div>
+
+            <div id="otherDistrictWrap" class="hidden">
+              <label for="fDistrictOther" class="label">اسم الحي</label>
+              <input id="fDistrictOther" type="text" class="field" placeholder="اكتب اسم الحي" />
+              <p class="err" data-err="districtOther">فضلاً اكتب اسم الحي</p>
+            </div>
+
+            <div>
+              <label for="fAddress" class="label">وصف العنوان / موقع المنزل</label>
+              <input id="fAddress" name="address" type="text" class="field" placeholder="الشارع، أقرب معلم، رقم المنزل" autocomplete="street-address" />
+              <p class="err" data-err="address">فضلاً اكتب وصفاً واضحاً للعنوان</p>
+            </div>
+
+            <div>
+              <label for="fNotes" class="label">ملاحظات التحضير <span class="text-muted font-normal">(اختياري)</span></label>
+              <textarea id="fNotes" name="notes" rows="2" class="field h-auto py-3 resize-none" placeholder="مثال: بدون جوز، حار زيادة…"></textarea>
+            </div>
+          </form>
+
+          <!-- Totals -->
+          <div class="mt-6 bg-white rounded-2xl border border-sage-line p-4 space-y-2.5 text-sm">
+            <div class="flex justify-between"><span class="text-muted">المجموع الفرعي</span><span class="font-bold"><span id="sumSubtotal">0</span> ر.س</span></div>
+            <div class="flex justify-between items-start gap-3">
+              <span class="text-muted">قيمة التوصيل</span>
+              <span class="text-left">
+                <span class="font-bold text-sage">0.00 ر.س</span>
+                <span class="block text-[11px] text-sage mt-0.5">مجاناً لجميع أحياء الأحساء</span>
+              </span>
+            </div>
+            <div class="border-t border-dashed border-sage-line pt-2.5 flex justify-between text-base">
+              <span class="font-bold">الإجمالي</span>
+              <span class="font-display font-bold text-rust-dark"><span id="sumTotal">0</span> ر.س</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="px-5 pt-3 border-t border-sage-line/70 bg-cream shrink-0" style="padding-bottom: calc(14px + env(safe-area-inset-bottom));">
+          <button id="submitBtn" type="button" data-action="submit" class="w-full h-14 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.98] transition text-white font-bold text-base flex items-center justify-center gap-2 disabled:opacity-70">
+            <i data-lucide="message-circle" class="w-5 h-5"></i>
+            <span>تأكيد الطلب عبر واتساب</span>
+            <span class="opacity-80 font-display">· <span id="btnTotal">0</span> ر.س</span>
+          </button>
+          <p class="text-center text-[11px] text-muted mt-2">سيتم تحويلك لواتساب لإرسال الطلب وتأكيده</p>
+        </div>
+      </div>
+
+      <!-- Success view -->
+      <div id="successView" class="hidden px-6 py-8 text-center overflow-y-auto" style="padding-bottom: calc(24px + env(safe-area-inset-bottom));">
+        <div class="w-20 h-20 mx-auto rounded-full bg-sage-soft grid place-items-center pop">
+          <i data-lucide="check" class="w-10 h-10 text-sage"></i>
+        </div>
+        <h3 class="font-display font-bold text-2xl mt-4">تم تجهيز طلبك!</h3>
+        <p class="text-muted mt-2 text-sm leading-relaxed">رقم طلبك: <b id="successOrderId" class="text-ink font-display" dir="ltr"></b><br/>اضغط «إرسال» في واتساب ليصلنا طلبك ونبدأ التحضير 🌿</p>
+        <a id="waFallback" href="#" class="mt-6 w-full h-14 rounded-2xl bg-[#25D366] text-white font-bold flex items-center justify-center gap-2">
+          <i data-lucide="message-circle" class="w-5 h-5"></i> لم يفتح واتساب؟ اضغط هنا
+        </a>
+        <button data-action="back-to-menu" class="mt-3 w-full h-12 rounded-2xl bg-white border border-sage-line font-bold text-ink">العودة للمنيو</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <script>
+  /* =========================================================
+     ⚙️ الإعدادات — عدّل هذه القيم فقط
+     ========================================================= */
+  const GOOGLE_SHEET_URL = "ضع_رابطك_هنا";   // رابط Web App من Google Apps Script (ينتهي بـ /exec)
+  const WHATSAPP_NUMBER  = "966533470201";   // رقم استقبال الطلبات
+  const SNAP_PIXEL_ID    = "";               // اختياري: معرّف Snap Pixel لتتبع التحويلات من إعلانات سناب
+
+  const MENU = [
+    { id: 'lomi',    cat: 'pasta',   name: 'باستا اللومي الحساوي', en: 'Signature Lomi Pasta', price: 25, img: '4.png',  badge: 'الطبق المميز ⭐',
+      desc: 'صُنعت بحب مع نكهة لومي الأحساء الفريدة وجبن البارميزان' },
+    { id: 'pesto',   cat: 'pasta',   name: 'بستو لايم باستا',      en: 'Pesto Lime Pasta',     price: 32, img: '2.jpg',
+      desc: 'باستا بصلصة البيستو الإيطالية الطازجة، لمسة ليمون، وجبن البارميزان' },
+    { id: 'rubi',    cat: 'pasta',   name: 'روبي باستا',            en: 'Rubi Pasta',           price: 24, img: '6.jpg',
+      desc: 'خلطة الشمندر الخاصة مع الجوز المقرمش وجبن البارميزان' },
+    { id: 'pink',    cat: 'pasta',   name: 'بينك باستا',            en: 'Pink Pasta',           price: 21, img: '11.png',
+      desc: 'صلصة بينك كريمية غنية مع الريحان وجبن البارميزان الفاخر' },
+    { id: 'lasagna', cat: 'lasagna', name: 'كلاسيك لازانيا',        en: 'Classic Lasagna',      price: 23, img: '8.jpg',
+      desc: 'طبقات اللازانيا الكلاسيكية باللحم المفروم والبارميزان المخبوزة بإتقان' },
+    { id: 'spicy',   cat: 'lasagna', name: 'سبايسي لازانيا',        en: 'Spicy Lasagna',        price: 24, img: '9.jpg',  badge: 'حار 🌶️',
+      desc: 'لازانيا غنية باللحم والجبن مع لمسة حارة ومميزة لعشاق السبايسي' }
+  ];
+
+  const DISTRICTS = ['المزروع', 'السلمانية', 'الخالدية', 'محاسن', 'الراشدية', 'الجامعيين', 'المحمدية', 'العزيزية', 'النعاثل', 'الكوت', 'الرفعة', 'أخرى'];
+
+  /* =========================================================
+     الحالة والتخزين
+     ========================================================= */
+  const CART_KEY = 'latilia_cart_v1';
+  const CUSTOMER_KEY = 'latilia_customer_v1';
+  const $ = (s, r = document) => r.querySelector(s);
+  const byId = Object.fromEntries(MENU.map(i => [i.id, i]));
+  let cart = {};
+  let sheetOpen = false;
+  let submitting = false;
+
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+
+  (function loadCart() {
+    const saved = store.get(CART_KEY) || {};
+    for (const id in saved) if (byId[id] && saved[id] > 0) cart[id] = Math.min(saved[id], 50);
+  })();
+
+  const cartItems  = () => Object.keys(cart).map(id => ({ ...byId[id], qty: cart[id] }));
+  const cartCount  = () => Object.values(cart).reduce((a, b) => a + b, 0);
+  const cartTotal  = () => cartItems().reduce((s, i) => s + i.qty * i.price, 0);
+
+  /* =========================================================
+     Snap Pixel (اختياري)
+     ========================================================= */
+  if (SNAP_PIXEL_ID) {
+    (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};a.queue=[];var s='script';var r=t.createElement(s);r.async=!0;r.src=n;var u=t.getElementsByTagName(s)[0];u.parentNode.insertBefore(r,u);})(window,document,'https://sc-static.net/scevent.min.js');
+    snaptr('init', SNAP_PIXEL_ID, {});
+    snaptr('track', 'PAGE_VIEW');
+  }
+  function track(event, data) { try { if (window.snaptr) snaptr('track', event, data || {}); } catch (e) {} }
+
+  /* =========================================================
+     أيقونات مضمنة للعناصر المتكررة (أسرع من إعادة رسم Lucide)
+     ========================================================= */
+  const SVG = {
+    plus:  '<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+    minus: '<svg viewBox="0 0 24 24" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+    trash: '<svg viewBox="0 0 24 24" class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'
+  };
+
+  /* =========================================================
+     عرض المنيو
+     ========================================================= */
+  function ctrlHTML(id) {
+    const q = cart[id] || 0;
+    if (!q) {
+      return `<button data-action="add" data-id="${id}" class="h-11 min-w-[142px] px-4 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.96] transition text-white font-bold text-sm flex items-center justify-center gap-1.5">${SVG.plus}<span>إضافة للسلة</span></button>`;
+    }
+    return `<div class="h-11 min-w-[142px] rounded-2xl bg-rust-soft border border-rust/20 flex items-center justify-between p-1 pop">
+        <button data-action="inc" data-id="${id}" class="w-9 h-9 rounded-xl bg-rust text-white grid place-items-center active:scale-90 transition" aria-label="زيادة">${SVG.plus}</button>
+        <span class="font-display font-bold text-lg text-rust-dark w-8 text-center">${q}</span>
+        <button data-action="dec" data-id="${id}" class="w-9 h-9 rounded-xl bg-white text-rust-dark grid place-items-center active:scale-90 transition border border-rust/20" aria-label="تقليل">${q === 1 ? SVG.trash : SVG.minus}</button>
+      </div>`;
+  }
+
+  function renderMenu() {
+    $('#menuGrid').innerHTML = MENU.map((item, idx) => `
+      <article class="bg-white rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
+        <div class="relative aspect-[4/3] rounded-[20px] overflow-hidden bg-sage-soft">
+          <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover" ${idx < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
+               onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')" />
+          <div class="hidden absolute inset-0 grid place-items-center text-6xl">🍝</div>
+          ${item.badge ? `<span class="absolute top-3 right-3 bg-white/95 text-rust-dark text-xs font-bold px-3 py-1.5 rounded-full shadow">${item.badge}</span>` : ''}
+        </div>
+        <div class="px-2 pt-3.5 pb-1.5">
+          <h3 class="font-display font-bold text-[19px] text-ink leading-snug">${item.name}</h3>
+          <p class="text-[11px] tracking-wider text-muted mt-0.5 text-right" dir="ltr">${item.en}</p>
+          <p class="text-sm text-muted leading-relaxed mt-2">${item.desc}</p>
+          <div class="flex items-center justify-between mt-4 gap-3">
+            <div class="font-display leading-none"><span class="text-[26px] font-bold text-ink">${item.price}</span> <span class="text-sm text-muted">ر.س</span></div>
+            <div data-ctrl="${item.id}">${ctrlHTML(item.id)}</div>
+          </div>
+        </div>
+      </article>`).join('');
+  }
+
+  function refreshCtrl(id) {
+    const el = document.querySelector(`[data-ctrl="${id}"]`);
+    if (el) el.innerHTML = ctrlHTML(id);
+  }
+
+  /* =========================================================
+     السلة
+     ========================================================= */
+  function setQty(id, q) {
+    const prev = cart[id] || 0;
+    q = Math.max(0, Math.min(50, q));
+    if (q === 0) delete cart[id]; else cart[id] = q;
+    store.set(CART_KEY, cart);
+    refreshCtrl(id);
+    updateCartUI(q > prev);
+    if (q > prev) track('ADD_CART', { item_ids: [id], price: byId[id].price, currency: 'SAR' });
+    if (sheetOpen) {
+      if (!cartCount()) { closeSheet(); return; }
+      renderSheetItems();
+    }
+  }
+
+  function updateCartUI(bump) {
+    const count = cartCount(), total = cartTotal();
+    const bar = $('#cartBar');
+    bar.style.transform = count ? 'translateY(0)' : 'translateY(140%)';
+    $('#barCount').textContent = count;
+    $('#barTotal').textContent = total;
+    const hc = $('#headerCount');
+    hc.textContent = count;
+    hc.classList.toggle('hidden', !count);
+    hc.classList.toggle('grid', !!count);
+    if (bump) {
+      [$('#barCount'), hc].forEach(el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); });
+    }
+    $('#sumSubtotal').textContent = total;
+    $('#sumTotal').textContent = total;
+    $('#btnTotal').textContent = total;
+  }
+
+  function renderSheetItems() {
+    $('#sheetItems').innerHTML = cartItems().map(i => `
+      <li class="flex items-center gap-3 bg-white rounded-2xl border border-sage-line p-2.5">
+        <div class="w-14 h-14 rounded-xl overflow-hidden bg-sage-soft shrink-0 grid place-items-center text-2xl">
+          <img src="${i.img}" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(document.createTextNode('🍝'))" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-[15px] truncate">${i.name}</p>
+          <p class="text-sm text-muted font-display">${i.qty * i.price} ر.س</p>
+        </div>
+        <div class="flex items-center gap-1 bg-cream-deep rounded-xl p-1">
+          <button data-action="inc" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="زيادة">${SVG.plus}</button>
+          <span class="w-6 text-center font-display font-bold">${i.qty}</span>
+          <button data-action="dec" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="تقليل">${i.qty === 1 ? SVG.trash : SVG.minus}</button>
+        </div>
+      </li>`).join('');
+  }
+
+  /* =========================================================
+     النافذة المنبثقة (Bottom Sheet)
+     ========================================================= */
+  function openSheet() {
+    if (!cartCount()) return;
+    $('#checkoutView').classList.remove('hidden');
+    $('#successView').classList.add('hidden');
+    renderSheetItems();
+    prefillCustomer();
+    $('#sheet').style.transform = 'translateY(0)';
+    const ov = $('#sheetOverlay');
+    ov.style.opacity = '1'; ov.style.pointerEvents = 'auto';
+    document.body.style.overflow = 'hidden';
+    sheetOpen = true;
+    if (!(history.state && history.state.sheet)) history.pushState({ sheet: true }, '');
+    track('START_CHECKOUT', { price: cartTotal(), currency: 'SAR', number_items: cartCount() });
+  }
+
+  function closeSheet(fromPop) {
+    $('#sheet').style.transform = 'translateY(100%)';
+    const ov = $('#sheetOverlay');
+    ov.style.opacity = '0'; ov.style.pointerEvents = 'none';
+    document.body.style.overflow = '';
+    sheetOpen = false;
+    if (!fromPop && history.state && history.state.sheet) history.back();
+  }
+  window.addEventListener('popstate', () => { if (sheetOpen) closeSheet(true); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeSheet(); });
+
+  /* =========================================================
+     النموذج والتحقق
+     ========================================================= */
+  function fillDistricts() {
+    $('#fDistrict').insertAdjacentHTML('beforeend', DISTRICTS.map(d => `<option value="${d}">${d}</option>`).join(''));
+  }
+
+  const toEnDigits = s => String(s || '')
+    .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+
+  function normalizePhone(v) {
+    let p = toEnDigits(v).replace(/\D/g, '');
+    if (p.startsWith('00966')) p = p.slice(5);
+    if (p.startsWith('966')) p = p.slice(3);
+    if (p.length === 9 && p.startsWith('5')) p = '0' + p;
+    return p;
+  }
+
+  function setError(key, inputEl, show) {
+    const msg = document.querySelector(`[data-err="${key}"]`);
+    if (msg) msg.classList.toggle('hidden', !show);
+    if (inputEl) inputEl.classList.toggle('is-invalid', show);
+  }
+
+  function validate() {
+    const name = $('#fName').value.trim();
+    const phone = normalizePhone($('#fPhone').value);
+    const districtSel = $('#fDistrict').value;
+    const districtOther = $('#fDistrictOther').value.trim();
+    const address = $('#fAddress').value.trim();
+    const notes = $('#fNotes').value.trim();
+
+    const checks = [
+      ['name', $('#fName'), name.length >= 2],
+      ['phone', $('#fPhone'), /^05\d{8}$/.test(phone)],
+      ['district', $('#fDistrict'), !!districtSel],
+      ['districtOther', $('#fDistrictOther'), districtSel !== 'أخرى' || districtOther.length >= 2],
+      ['address', $('#fAddress'), address.length >= 4]
+    ];
+    let firstBad = null;
+    checks.forEach(([k, el, ok]) => { setError(k, el, !ok); if (!ok && !firstBad) firstBad = el; });
+    if (firstBad) {
+      firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => firstBad.focus({ preventScroll: true }), 300);
+      return null;
+    }
+    const district = districtSel === 'أخرى' ? districtOther : districtSel;
+    return { name, phone, district, districtSel, districtOther, address, notes };
+  }
+
+  function prefillCustomer() {
+    const c = store.get(CUSTOMER_KEY);
+    if (!c) return;
+    if (!$('#fName').value) $('#fName').value = c.name || '';
+    if (!$('#fPhone').value) $('#fPhone').value = c.phone || '';
+    if (!$('#fDistrict').value && c.districtSel) { $('#fDistrict').value = c.districtSel; toggleOther(); }
+    if (!$('#fDistrictOther').value) $('#fDistrictOther').value = c.districtOther || '';
+    if (!$('#fAddress').value) $('#fAddress').value = c.address || '';
+  }
+
+  function toggleOther() {
+    $('#otherDistrictWrap').classList.toggle('hidden', $('#fDistrict').value !== 'أخرى');
+  }
+
+  /* =========================================================
+     الإرسال المزدوج: Google Sheets + WhatsApp
+     ========================================================= */
+  function makeOrderId() {
+    const d = new Date();
+    const mmdd = String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+    return `LT-${mmdd}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  function buildOrder(c) {
+    const items = cartItems().map(i => ({ name: i.name, qty: i.qty, price: i.price, lineTotal: i.qty * i.price }));
+    const params = new URLSearchParams(location.search);
+    return {
+      orderId: makeOrderId(),
+      timestamp: new Date().toISOString(),
+      localTime: new Date().toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour12: false }),
+      name: c.name,
+      phone: c.phone,
+      district: c.district,
+      address: c.address,
+      notes: c.notes,
+      items,
+      itemsText: items.map(i => `${i.qty}x ${i.name}`).join(' | '),
+      itemsCount: items.reduce((s, i) => s + i.qty, 0),
+      total: items.reduce((s, i) => s + i.lineTotal, 0),
+      delivery: 0,
+      source: params.get('utm_source') || (/snapchat/i.test(navigator.userAgent) ? 'snapchat' : 'direct'),
+      campaign: params.get('utm_campaign') || ''
+    };
+  }
+
+  function buildMessage(o) {
+    return [
+      'طلب جديد من موقع لتيليا 🌿',
+      `🧾 رقم الطلب: ${o.orderId}`,
+      `👤 الاسم: ${o.name}`,
+      `📱 الجوال: ${o.phone}`,
+      `📍 العنوان: الأحساء - حي ${o.district} - ${o.address}`,
+      '--------------------------------',
+      '📋 تفاصيل الطلب:',
+      ...o.items.map(i => `• ${i.qty}x ${i.name} - ${i.lineTotal} ر.س`),
+      '--------------------------------',
+      `💵 الإجمالي: ${o.total} ر.س`,
+      '🚚 التوصيل: مجاني (داخل الأحساء فقط)',
+      `📝 ملاحظات: ${o.notes || 'لا يوجد'}`
+    ].join('\n');
+  }
+
+  function sendToSheet(order) {
+    if (!/^https:\/\/script\.google(usercontent)?\.com\//.test(GOOGLE_SHEET_URL)) return Promise.resolve();
+    // text/plain + no-cors = طلب بسيط بدون preflight، فلا توجد مشكلة CORS مع Apps Script
+    return fetch(GOOGLE_SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      keepalive: true,
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(order)
+    }).catch(() => {});
+  }
+
+  async function submitOrder() {
+    if (submitting || !cartCount()) return;
+    const c = validate();
+    if (!c) return;
+
+    submitting = true;
+    const btn = $('#submitBtn');
+    const btnHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span><span>جاري تجهيز طلبك…</span>';
+
+    const order = buildOrder(c);
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildMessage(order))}`;
+
+    track('PURCHASE', { price: order.total, currency: 'SAR', transaction_id: order.orderId, number_items: order.itemsCount });
+
+    // ننتظر الشيت بحد أقصى 1.5 ثانية حتى لا يتأخر العميل
+    await Promise.race([sendToSheet(order), new Promise(r => setTimeout(r, 1500))]);
+
+    store.set(CUSTOMER_KEY, { name: c.name, phone: c.phone, districtSel: c.districtSel, districtOther: c.districtOther, address: c.address });
+
+    // عرض شاشة النجاح (مفيدة داخل متصفح سناب إن لم يفتح واتساب تلقائياً)
+    $('#successOrderId').textContent = order.orderId;
+    $('#waFallback').href = waUrl;
+    $('#checkoutView').classList.add('hidden');
+    $('#successView').classList.remove('hidden');
+
+    // تفريغ السلة
+    const ids = Object.keys(cart);
+    cart = {};
+    store.set(CART_KEY, cart);
+    ids.forEach(refreshCtrl);
+    updateCartUI(false);
+    $('#fNotes').value = '';
+
+    btn.disabled = false;
+    btn.innerHTML = btnHTML;
+    submitting = false;
+
+    window.location.href = waUrl;
+  }
+
+  /* =========================================================
+     الأحداث
+     ========================================================= */
+  document.addEventListener('click', e => {
+    const t = e.target.closest('[data-action],[data-filter]');
+    if (!t) return;
+
+    if (t.dataset.filter) {
+      const f = t.dataset.filter;
+      document.querySelectorAll('#tabs .tab').forEach(b => {
+        const on = b === t;
+        b.classList.toggle('tab-active', on);
+        b.classList.toggle('tab-idle', !on);
+      });
+      document.querySelectorAll('#menuGrid article').forEach(card => {
+        card.classList.toggle('hidden', f !== 'all' && card.dataset.cat !== f);
+      });
+      return;
+    }
+
+    const id = t.dataset.id;
+    switch (t.dataset.action) {
+      case 'add': setQty(id, 1); break;
+      case 'inc': setQty(id, (cart[id] || 0) + 1); break;
+      case 'dec': setQty(id, (cart[id] || 0) - 1); break;
+      case 'checkout': openSheet(); break;
+      case 'close-sheet': closeSheet(); break;
+      case 'submit': submitOrder(); break;
+      case 'back-to-menu': closeSheet(); window.scrollTo({ top: 0, behavior: 'smooth' }); break;
+    }
+  });
+
+  $('#fPhone').addEventListener('input', e => {
+    const v = toEnDigits(e.target.value).replace(/\D/g, '').slice(0, 10);
+    if (e.target.value !== v) e.target.value = v;
+  });
+  $('#fDistrict').addEventListener('change', toggleOther);
+  ['fName', 'fPhone', 'fDistrict', 'fDistrictOther', 'fAddress'].forEach(fid => {
+    const el = document.getElementById(fid);
+    el.addEventListener('input', () => el.classList.remove('is-invalid'));
+  });
+
+  /* =========================================================
+     التشغيل
+     ========================================================= */
+  fillDistricts();
+  renderMenu();
+  updateCartUI(false);
+  if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
