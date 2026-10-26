@@ -194,6 +194,22 @@
     #siteHeader { transition: box-shadow .25s ease; }
     #siteHeader.scrolled { box-shadow: 0 8px 24px -14px rgba(31,36,31,.45); }
 
+    /* 13) زر إضافة الدجاج */
+    .chk-btn { background: #FFF8EC; border: 1.5px dashed rgba(221,98,39,.55); }
+    .chk-btn:hover { background: #FCE3D2; }
+    .chk-on  { background: #606D39; color: #FFF0D8; border: 1.5px solid #606D39; }
+    .chk-ico { flex: none; display: grid; place-items: center; border-radius: 999px; background: #fff; box-shadow: 0 2px 6px -2px rgba(31,36,31,.25); }
+    .chk-price { flex: none; background: #DD6227; color: #fff; font-weight: 800; font-size: 12px; padding: 5px 10px; border-radius: 999px; font-family: 'Readex Pro', Tajawal, sans-serif; }
+    .chk-tick { flex: none; width: 28px; height: 28px; border-radius: 999px; background: #FFF0D8; color: #606D39; display: grid; place-items: center; }
+    .chk-step { width: 34px; height: 34px; border-radius: 12px; background: #FFF0D8; color: #4F5A2D; display: grid; place-items: center; transition: transform .15s ease, opacity .2s; }
+    .chk-step:active { transform: scale(.9); }
+    .chk-step:disabled { opacity: .35; }
+    .chk-step svg { width: 18px; height: 18px; }
+    @keyframes nudge { 0%,100% { transform: none; } 15% { transform: translateY(-3px); } 30% { transform: translateY(0) rotate(-.6deg); } 45% { transform: translateY(-2px) rotate(.6deg); } 60% { transform: none; } }
+    @keyframes nudgeIco { 0%,100% { transform: none; } 20% { transform: rotate(-14deg) scale(1.12); } 40% { transform: rotate(12deg) scale(1.12); } 60% { transform: rotate(-6deg); } }
+    .nudge { animation: nudge .9s ease-in-out; box-shadow: 0 0 0 4px rgba(221,98,39,.14); }
+    .nudge .chk-ico { animation: nudgeIco .9s ease-in-out; }
+
     /* احترام إعداد «تقليل الحركة» في الجوال */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
@@ -369,6 +385,7 @@
           <!-- Totals -->
           <div class="mt-6 bg-cream-light rounded-2xl border border-sage-line p-4 space-y-2.5 text-sm">
             <div class="flex justify-between"><span class="text-muted">المجموع الفرعي</span><span class="font-bold"><span id="sumSubtotal">0</span> ر.س</span></div>
+            <div id="chkRow" class="hidden justify-between"><span class="text-muted">إضافة دجاج 🍗 × <span id="chkCount">0</span></span><span class="font-bold"><bdi>+<span id="chkSum">0</span></bdi> ر.س</span></div>
             <div class="flex justify-between items-start gap-3">
               <span class="text-muted">قيمة التوصيل</span>
               <span class="text-left">
@@ -458,14 +475,25 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
 
+  /* إضافة الدجاج: متاحة لأطباق الباستا فقط، وتُحسب لكل طبق على حدة
+     chicken[id] = عدد الأطباق التي عليها دجاج من هذا الصنف (من 0 إلى عدد الأطباق) */
+  const CHICKEN_PRICE = 3;
+  const CHICKEN_KEY = 'latilia_chicken_v1';
+  let chicken = {};
+  const isPasta = id => !!byId[id] && byId[id].cat === 'pasta';
+
   (function loadCart() {
     const saved = store.get(CART_KEY) || {};
     for (const id in saved) if (byId[id] && saved[id] > 0) cart[id] = Math.min(saved[id], 50);
+    const ch = store.get(CHICKEN_KEY) || {};
+    for (const id in ch) if (isPasta(id) && cart[id] && ch[id] > 0) chicken[id] = Math.min(ch[id], cart[id]);
   })();
 
-  const cartItems  = () => Object.keys(cart).map(id => ({ ...byId[id], qty: cart[id] }));
+  const cartItems  = () => Object.keys(cart).map(id => ({ ...byId[id], qty: cart[id], chicken: chicken[id] || 0 }));
+  const lineTotal  = i => i.qty * i.price + i.chicken * CHICKEN_PRICE;
   const cartCount  = () => Object.values(cart).reduce((a, b) => a + b, 0);
-  const cartTotal  = () => cartItems().reduce((s, i) => s + i.qty * i.price, 0);
+  const chickenCount = () => Object.values(chicken).reduce((a, b) => a + b, 0);
+  const cartTotal  = () => cartItems().reduce((s, i) => s + lineTotal(i), 0);
 
   /* =========================================================
      Snap Pixel (اختياري)
@@ -587,8 +615,72 @@
             <div class="font-display leading-none"><span class="text-[26px] font-bold text-ink">${item.price}</span> <span class="text-sm text-muted">ر.س</span></div>
             <div data-ctrl="${item.id}">${ctrlHTML(item.id)}</div>
           </div>
+          ${item.cat === 'pasta' ? `<div data-chk="${item.id}" class="mt-2.5">${chkHTML(item.id)}</div>` : ''}
         </div>
       </article>`).join('');
+  }
+
+  /* زر إضافة الدجاج تحت زر الكمية
+     - بدون دجاج: زر جذاب «أضف دجاج +3 ر.س» (وإن لم يكن الطبق في السلة يضيف طبقاً بدجاج مباشرة)
+     - طبق واحد: زر تبديل «مع دجاج ✓»
+     - أكثر من طبق: عدّاد «دجاج على 1 من 2» ليختار العميل كم طبقاً يريده بدجاج */
+  function chkHTML(id, compact = false) {
+    const q = cart[id] || 0, c = chicken[id] || 0;
+    const h = compact ? 'h-10' : 'h-[52px]';
+    const ico = `<span class="chk-ico ${compact ? 'w-7 h-7 text-base' : 'w-9 h-9 text-xl'}" aria-hidden="true">🍗</span>`;
+    if (!c) {
+      const sub = q > 1 ? 'اختر كم طبقاً تريده بالدجاج' : 'بروتين إضافي لطبق أشبع وألذ';
+      return `<button data-action="chk-add" data-id="${id}" class="chk-btn ${h} w-full rounded-2xl flex items-center gap-2.5 px-2 text-right active:scale-[.98] transition">
+          ${ico}
+          <span class="flex-1 min-w-0 leading-tight">
+            <span class="block font-bold text-[14px] text-ink">${compact ? 'أضف دجاج لهذا الطبق' : 'أضف دجاج لطبقك'}</span>
+            ${compact ? '' : `<span class="block text-[11px] text-muted mt-0.5">${sub}</span>`}
+          </span>
+          <span class="chk-price"><bdi>+${CHICKEN_PRICE}</bdi> ر.س</span>
+        </button>`;
+    }
+    if (q <= 1) {
+      return `<button data-action="chk-dec" data-id="${id}" class="chk-on ${h} w-full rounded-2xl flex items-center gap-2.5 px-2 text-right active:scale-[.98] transition" aria-pressed="true">
+          ${ico}
+          <span class="flex-1 min-w-0 leading-tight">
+            <span class="block font-bold text-[14px]">مع دجاج</span>
+            ${compact ? '' : `<span class="block text-[11px] opacity-80 mt-0.5"><bdi>+${CHICKEN_PRICE}</bdi> ر.س · اضغط للإزالة</span>`}
+          </span>
+          <span class="chk-tick" aria-hidden="true"><svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        </button>`;
+    }
+    const all = c >= q;
+    return `<div class="chk-on ${h} w-full rounded-2xl flex items-center gap-2.5 px-2">
+        ${ico}
+        <span class="flex-1 min-w-0 leading-tight">
+          <span class="block font-bold text-[14px]">${all ? `دجاج على كل الأطباق (${q})` : `دجاج على <span data-chkn>${c}</span> من ${q}`}</span>
+          ${compact ? '' : `<span class="block text-[11px] opacity-80 mt-0.5"><bdi>+${c * CHICKEN_PRICE}</bdi> ر.س${all ? '' : ` · والباقي بدون دجاج`}</span>`}
+        </span>
+        <span class="flex items-center gap-1">
+          <button data-action="chk-dec" data-id="${id}" class="chk-step" aria-label="تقليل أطباق الدجاج">${c === 1 ? SVG.trash : SVG.minus}</button>
+          <button data-action="chk-inc" data-id="${id}" class="chk-step" aria-label="زيادة أطباق الدجاج" ${all ? 'disabled' : ''}>${SVG.plus}</button>
+        </span>
+      </div>`;
+  }
+
+  function refreshChk(id, animate = false) {
+    const el = document.querySelector(`[data-chk="${id}"]`);
+    if (!el) return;
+    el.innerHTML = chkHTML(id);
+    if (animate && el.firstElementChild) replay(el.firstElementChild, 'pop');
+  }
+
+  // تغيير عدد أطباق الدجاج لصنف معيّن (لا يتجاوز عدد الأطباق)
+  function setChicken(id, n) {
+    if (!isPasta(id)) return;
+    const prev = chicken[id] || 0;
+    n = Math.max(0, Math.min(cart[id] || 0, n));
+    if (n === 0) delete chicken[id]; else chicken[id] = n;
+    store.set(CHICKEN_KEY, chicken);
+    refreshChk(id, (prev === 0) !== (n === 0));
+    updateCartUI(false);
+    if (n > prev) { buzz(12); track('ADD_CART', { item_ids: [id + '_chicken'], price: CHICKEN_PRICE, currency: 'SAR' }); }
+    if (sheetOpen) renderSheetItems();
   }
 
   // تحديث زر الكمية: الرقم يتدحرج للأعلى عند الزيادة وللأسفل عند النقص بدل إعادة الرسم
@@ -618,7 +710,14 @@
     q = Math.max(0, Math.min(50, q));
     if (q === 0) delete cart[id]; else cart[id] = q;
     store.set(CART_KEY, cart);
+    // أطباق الدجاج لا تتجاوز عدد الأطباق: لو نقص العدد تنقص معه
+    if ((chicken[id] || 0) > q) { if (q) chicken[id] = q; else delete chicken[id]; store.set(CHICKEN_KEY, chicken); }
     refreshCtrl(id, Math.sign(q - prev));
+    refreshChk(id);
+    // تلميح لطيف: بعد أول إضافة لطبق باستا، يتحرك زر الدجاج ليلفت النظر
+    if (prev === 0 && q > 0 && isPasta(id) && !chicken[id]) {
+      setTimeout(() => replay(document.querySelector(`[data-chk="${id}"] .chk-btn`), 'nudge'), 750);
+    }
     updateCartUI(q > prev && !opts.deferBump);
     if (q > prev) track('ADD_CART', { item_ids: [id], price: byId[id].price, currency: 'SAR' });
     if (sheetOpen) {
@@ -649,25 +748,35 @@
     hc.classList.toggle('hidden', !count);
     hc.classList.toggle('grid', !!count);
     if (bump) landBump();
-    ['#sumSubtotal', '#sumTotal', '#btnTotal'].forEach(s => tweenNum($(s), total));
+    // تفصيل المجاميع: الأطباق + إضافة الدجاج + التوصيل
+    const chk = chickenCount();
+    tweenNum($('#sumSubtotal'), total - chk * CHICKEN_PRICE);
+    const row = $('#chkRow');
+    if (row) { row.classList.toggle('hidden', !chk); row.classList.toggle('flex', !!chk); $('#chkCount').textContent = chk; tweenNum($('#chkSum'), chk * CHICKEN_PRICE); }
+    ['#sumTotal', '#btnTotal'].forEach(s => tweenNum($(s), total));
   }
 
   function renderSheetItems() {
-    $('#sheetItems').innerHTML = cartItems().map((i, n) => `
-      <li data-li="${i.id}" style="--i:${n}" class="flex items-center gap-3 bg-cream-light rounded-2xl border border-sage-line p-2.5">
-        <div class="w-14 h-14 rounded-xl overflow-hidden bg-sage-soft shrink-0 grid place-items-center text-2xl">
-          <img src="${i.img}" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(document.createTextNode('🍝'))" />
+    $('#sheetItems').innerHTML = cartItems().map((i, n) => {
+      return `
+      <li data-li="${i.id}" style="--i:${n}" class="bg-cream-light rounded-2xl border border-sage-line p-2.5">
+        <div class="flex items-center gap-3">
+          <div class="w-14 h-14 rounded-xl overflow-hidden bg-sage-soft shrink-0 grid place-items-center text-2xl">
+            <img src="${i.img}" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(document.createTextNode('🍝'))" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-[15px] truncate">${i.name}</p>
+            <p class="text-sm text-muted font-display">${lineTotal(i)} ر.س</p>
+          </div>
+          <div class="flex items-center gap-1 bg-cream-deep rounded-xl p-1">
+            <button data-action="inc" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="زيادة">${SVG.plus}</button>
+            <span class="w-6 text-center font-display font-bold">${i.qty}</span>
+            <button data-action="dec" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="تقليل">${i.qty === 1 ? SVG.trash : SVG.minus}</button>
+          </div>
         </div>
-        <div class="flex-1 min-w-0">
-          <p class="font-bold text-[15px] truncate">${i.name}</p>
-          <p class="text-sm text-muted font-display">${i.qty * i.price} ر.س</p>
-        </div>
-        <div class="flex items-center gap-1 bg-cream-deep rounded-xl p-1">
-          <button data-action="inc" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="زيادة">${SVG.plus}</button>
-          <span class="w-6 text-center font-display font-bold">${i.qty}</span>
-          <button data-action="dec" data-id="${i.id}" class="w-8 h-8 rounded-lg bg-white grid place-items-center text-rust-dark border border-sage-line" aria-label="تقليل">${i.qty === 1 ? SVG.trash : SVG.minus}</button>
-        </div>
-      </li>`).join('');
+        ${isPasta(i.id) ? `<div class="mt-2">${chkHTML(i.id, true)}</div>` : ''}
+      </li>`;
+    }).join('');
   }
 
   /* =========================================================
@@ -848,7 +957,13 @@
   }
 
   function buildOrder(c) {
-    const items = cartItems().map(i => ({ name: i.name, qty: i.qty, price: i.price, lineTotal: i.qty * i.price }));
+    // كل صنف يُفصل إلى سطرين للمطبخ: الأطباق بدون دجاج، والأطباق مع دجاج
+    const items = [];
+    cartItems().forEach(i => {
+      const plain = i.qty - i.chicken;
+      if (plain > 0) items.push({ name: i.name, qty: plain, price: i.price, chicken: false, lineTotal: plain * i.price });
+      if (i.chicken > 0) items.push({ name: `${i.name} + دجاج`, qty: i.chicken, price: i.price + CHICKEN_PRICE, chicken: true, lineTotal: i.chicken * (i.price + CHICKEN_PRICE) });
+    });
     const params = new URLSearchParams(location.search);
     return {
       orderId: makeOrderId(),
@@ -878,7 +993,7 @@
       `📍 العنوان: الأحساء - حي ${o.district}`,
       '--------------------------------',
       '📋 تفاصيل الطلب:',
-      ...o.items.map(i => `• ${i.qty}x ${i.name} - ${i.lineTotal} ر.س`),
+      ...o.items.map(i => `• ${i.qty}x ${i.name}${i.chicken ? ' 🍗' : ''} - ${i.lineTotal} ر.س`),
       '--------------------------------',
       `💵 الإجمالي: ${o.total} ر.س`,
       `💳 طريقة الدفع: ${o.payment}`,
@@ -938,9 +1053,9 @@
 
     // تفريغ السلة
     const ids = Object.keys(cart);
-    cart = {};
-    store.set(CART_KEY, cart);
-    ids.forEach(id => refreshCtrl(id));
+    cart = {}; chicken = {};
+    store.set(CART_KEY, cart); store.set(CHICKEN_KEY, chicken);
+    ids.forEach(id => { refreshCtrl(id); refreshChk(id); });
     try { updateCartUI(false); } catch (e) {}
     $('#fNotes').value = '';
 
@@ -973,6 +1088,14 @@
       case 'add': { buzz(12); const flew = flyToCart(t); setQty(id, 1, { deferBump: flew }); break; }
       case 'inc': { buzz(8); const flew = flyToCart(t); setQty(id, (cart[id] || 0) + 1, { deferBump: flew }); break; }
       case 'dec': buzz(6); setQty(id, (cart[id] || 0) - 1); break;
+      // الدجاج: لو الطبق غير موجود في السلة نضيف طبقاً بدجاج مباشرة
+      case 'chk-add': {
+        if (!cart[id]) { const flew = flyToCart(t); setQty(id, 1, { deferBump: flew }); }
+        setChicken(id, 1);
+        break;
+      }
+      case 'chk-inc': setChicken(id, (chicken[id] || 0) + 1); break;
+      case 'chk-dec': buzz(6); setChicken(id, (chicken[id] || 0) - 1); break;
       case 'checkout': openSheet(); break;
       case 'close-sheet': closeSheet(); break;
       case 'submit': submitOrder(); break;
