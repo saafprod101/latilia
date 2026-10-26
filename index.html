@@ -3,35 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#5D6D4E" />
+  <meta name="theme-color" content="#606D39" />
   <title>لتيليا | Latilia — باستا إيطالية فاخرة في الأحساء</title>
   <meta name="description" content="لتيليا - مطعم إيطالي متخصص. باستا ولازانيا طازجة، اطلب الآن والتوصيل مجاني داخل الأحساء." />
   <meta property="og:title" content="لتيليا | Latilia — اطلب الآن والتوصيل مجاني" />
   <meta property="og:description" content="باستا إيطالية طازجة بنكهة أحسائية. التوصيل مجاني داخل الأحساء." />
-  <meta property="og:image" content="4.png" />
+  <meta property="og:image" content="https://saafprod101.github.io/latilia/img/og.jpg" />
+  <meta property="og:url" content="https://saafprod101.github.io/latilia/" />
   <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="img/icon.svg" />
+  <link rel="apple-touch-icon" href="img/og.jpg" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Preload hero dish images -->
-  <link rel="preload" as="image" href="4.png" />
-  <link rel="preload" as="image" href="2.jpg" />
+  <!-- Preload first dish images -->
+  <link rel="preload" as="image" href="img/lomi.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/logo.svg" type="image/svg+xml" />
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
+    if (window.tailwind) tailwind.config = {
       theme: {
         extend: {
           colors: {
-            sage:  { DEFAULT: '#5D6D4E', dark: '#4E5F40', soft: '#E9EDE3', line: '#DCE2D3' },
-            rust:  { DEFAULT: '#D3643B', dark: '#C9572D', soft: '#FBEAE2' },
-            cream: { DEFAULT: '#FBF9F5', deep: '#F7F4EE' },
+            /* ألوان الهوية الرسمية: #606D39 / #DD6227 / #FFF0D8 */
+            sage:  { DEFAULT: '#606D39', dark: '#4F5A2D', soft: '#EEEBD3', line: '#E9DAB9' },
+            rust:  { DEFAULT: '#DD6227', dark: '#C4531C', soft: '#FCE3D2' },
+            cream: { DEFAULT: '#FFF0D8', light: '#FFF8EC', deep: '#FBE6C3' },
             ink: '#1F241F',
-            muted: '#666666'
+            muted: '#6B6A5C'
           },
           fontFamily: {
             sans: ['Tajawal', 'system-ui', 'sans-serif'],
@@ -56,7 +60,7 @@
       .chip { @apply inline-flex items-center gap-1.5 bg-white/10 text-cream text-xs font-medium px-3 py-1.5 rounded-full border border-white/15; }
       .tab { @apply h-10 px-5 rounded-full text-sm font-bold border transition whitespace-nowrap; }
       .tab-active { @apply bg-sage text-white border-sage; }
-      .tab-idle { @apply bg-white text-ink border-sage-line; }
+      .tab-idle { @apply bg-cream-light text-ink border-sage-line; }
     }
   </style>
   <style>
@@ -77,15 +81,16 @@
 
     @keyframes shine { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
     .ribbon {
-      background: linear-gradient(90deg, #D3643B 0%, #E07A50 50%, #D3643B 100%);
+      background: linear-gradient(90deg, #DD6227 0%, #E8804C 50%, #DD6227 100%);
       background-size: 200% 100%;
       animation: shine 4s linear infinite;
     }
-    .hero-pattern {
-      background-color: #4E5F40;
-      background-image: radial-gradient(rgba(251,249,245,.09) 1px, transparent 1px);
-      background-size: 16px 16px;
-    }
+    .hero-pattern { background-color: #606D39; }
+    /* عنصر الأشرطة الثلاثة من الهوية */
+    .bars { display: inline-flex; gap: 5px; }
+    .bars i { display: block; width: 14px; height: 30px; background: #DD6227; }
+    .bars.sm { gap: 3px; }
+    .bars.sm i { width: 8px; height: 16px; }
     #cartBar { transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
     #sheet { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
     #sheetOverlay { transition: opacity .25s ease; }
@@ -99,16 +104,10 @@
   <!-- ===================== HEADER ===================== -->
   <header class="sticky top-0 z-30 bg-cream/90 backdrop-blur-md border-b border-sage-line/70">
     <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
-      <a href="#" class="flex items-center gap-2.5" aria-label="لتيليا">
-        <span class="w-10 h-10 rounded-full bg-sage grid place-items-center text-cream">
-          <i data-lucide="leaf" class="w-5 h-5"></i>
-        </span>
-        <span class="leading-none">
-          <span class="block font-display font-bold text-[22px] text-sage-dark">لتيليا</span>
-          <span class="block text-[10px] tracking-[.22em] text-muted mt-1" dir="ltr">LATILIA · ITALIAN</span>
-        </span>
+      <a href="#" class="block" aria-label="لتيليا - Latilia Specialty Italian Restaurant">
+        <img src="img/logo.svg" alt="لتيليا" width="150" height="40" class="h-10 w-auto" />
       </a>
-      <button data-action="checkout" class="relative w-11 h-11 rounded-full bg-white border border-sage-line grid place-items-center text-sage-dark" aria-label="السلة">
+      <button data-action="checkout" class="relative w-11 h-11 rounded-full bg-cream-light border border-sage-line grid place-items-center text-sage-dark" aria-label="السلة">
         <i data-lucide="shopping-bag" class="w-5 h-5"></i>
         <span id="headerCount" class="hidden absolute -top-1 -left-1 min-w-[20px] h-5 px-1 rounded-full bg-rust text-white text-[11px] font-bold grid place-items-center">0</span>
       </button>
@@ -123,16 +122,23 @@
   <main class="max-w-5xl mx-auto px-4 pb-36">
 
     <!-- ===================== HERO ===================== -->
-    <section class="hero-pattern rounded-[28px] mt-4 px-5 py-6 text-cream relative overflow-hidden">
-      <div class="absolute -left-10 -bottom-12 w-40 h-40 rounded-full bg-rust/25 blur-2xl"></div>
-      <p class="text-[11px] tracking-[.25em] text-cream/70 mb-2" dir="ltr" style="text-align:right">SPECIALTY ITALIAN RESTAURANT</p>
-      <h1 class="font-display font-bold text-[26px] leading-[1.35]">باستا إيطالية طازجة<br/><span class="text-[#F4B79A]">بلمسة أحسائية</span> 🍝</h1>
-      <p class="text-cream/80 text-sm mt-2">اختر طبقك، وأكّد طلبك عبر واتساب خلال ثوانٍ.</p>
-      <div class="flex flex-wrap gap-2 mt-4">
-        <span class="chip"><i data-lucide="chef-hat" class="w-3.5 h-3.5"></i> تُحضّر طازجة</span>
-        <span class="chip"><i data-lucide="truck" class="w-3.5 h-3.5"></i> توصيل مجاني بالأحساء</span>
-        <span class="chip"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> تأكيد عبر واتساب</span>
+    <section class="hero-pattern rounded-[28px] mt-4 text-cream relative overflow-hidden">
+      <!-- الأشرطة الثلاثة -->
+      <div class="bars absolute top-0 left-6" aria-hidden="true"><i></i><i></i><i></i></div>
+      <!-- أيقونة الهوية كخلفية -->
+      <img src="img/icon-cream.svg" alt="" aria-hidden="true" class="absolute -left-6 top-10 w-36 opacity-[.13] pointer-events-none" />
+      <div class="relative px-5 pt-7 pb-24">
+        <p class="text-[11px] tracking-[.25em] text-cream/70 mb-2" dir="ltr" style="text-align:right">SPECIALTY ITALIAN RESTAURANT</p>
+        <h1 class="font-display font-bold text-[26px] leading-[1.35]">باستا إيطالية طازجة<br/><span class="text-[#F7A577]">بلمسة أحسائية</span></h1>
+        <p class="text-cream/85 text-sm mt-2">اختر طبقك، وأكّد طلبك عبر واتساب خلال ثوانٍ.</p>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <span class="chip"><i data-lucide="chef-hat" class="w-3.5 h-3.5"></i> تُحضّر طازجة</span>
+          <span class="chip"><i data-lucide="truck" class="w-3.5 h-3.5"></i> توصيل مجاني بالأحساء</span>
+          <span class="chip"><i data-lucide="message-circle" class="w-3.5 h-3.5"></i> تأكيد عبر واتساب</span>
+        </div>
       </div>
+      <!-- خط معالم روما من الهوية -->
+      <img src="img/skyline.svg" alt="" aria-hidden="true" class="absolute bottom-0 inset-x-0 w-full h-20 object-contain object-bottom opacity-30 pointer-events-none" />
     </section>
 
     <!-- ===================== FILTER TABS ===================== -->
@@ -146,10 +152,10 @@
     <section id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" aria-label="قائمة الأطباق"></section>
 
     <!-- ===================== FOOTER ===================== -->
-    <footer class="text-center mt-10 text-xs text-muted space-y-1">
-      <p class="font-display font-bold text-sage-dark text-base">لتيليا · Latilia</p>
-      <p>Specialty Italian Restaurant — الأحساء</p>
-      <p>التوصيل مجاني داخل الأحساء فقط</p>
+    <footer class="text-center mt-12 text-xs text-muted">
+      <div class="bars sm justify-center mb-4" aria-hidden="true"><i></i><i></i><i></i></div>
+      <img src="img/logo.svg" alt="لتيليا" width="180" height="48" class="h-12 w-auto mx-auto" loading="lazy" />
+      <p class="mt-3">Made in Alahsa · التوصيل مجاني داخل الأحساء فقط</p>
     </footer>
   </main>
 
@@ -235,7 +241,7 @@
           </form>
 
           <!-- Totals -->
-          <div class="mt-6 bg-white rounded-2xl border border-sage-line p-4 space-y-2.5 text-sm">
+          <div class="mt-6 bg-cream-light rounded-2xl border border-sage-line p-4 space-y-2.5 text-sm">
             <div class="flex justify-between"><span class="text-muted">المجموع الفرعي</span><span class="font-bold"><span id="sumSubtotal">0</span> ر.س</span></div>
             <div class="flex justify-between items-start gap-3">
               <span class="text-muted">قيمة التوصيل</span>
@@ -289,17 +295,17 @@
   const SNAP_PIXEL_ID    = "";               // اختياري: معرّف Snap Pixel لتتبع التحويلات من إعلانات سناب
 
   const MENU = [
-    { id: 'lomi',    cat: 'pasta',   name: 'باستا اللومي الحساوي', en: 'Signature Lomi Pasta', price: 25, img: '4.png',  badge: 'الطبق المميز ⭐',
+    { id: 'lomi',    cat: 'pasta',   name: 'باستا اللومي الحساوي', en: 'Signature Lomi Pasta', price: 25, img: 'img/lomi.webp',  badge: 'الطبق المميز ⭐',
       desc: 'صُنعت بحب مع نكهة لومي الأحساء الفريدة وجبن البارميزان' },
-    { id: 'pesto',   cat: 'pasta',   name: 'بستو لايم باستا',      en: 'Pesto Lime Pasta',     price: 32, img: '2.jpg',
+    { id: 'pesto',   cat: 'pasta',   name: 'بستو لايم باستا',      en: 'Pesto Lime Pasta',     price: 32, img: 'img/pesto.webp',
       desc: 'باستا بصلصة البيستو الإيطالية الطازجة، لمسة ليمون، وجبن البارميزان' },
-    { id: 'rubi',    cat: 'pasta',   name: 'روبي باستا',            en: 'Rubi Pasta',           price: 24, img: '6.jpg',
+    { id: 'rubi',    cat: 'pasta',   name: 'روبي باستا',            en: 'Rubi Pasta',           price: 24, img: 'img/rubi.webp',
       desc: 'خلطة الشمندر الخاصة مع الجوز المقرمش وجبن البارميزان' },
-    { id: 'pink',    cat: 'pasta',   name: 'بينك باستا',            en: 'Pink Pasta',           price: 21, img: '11.png',
+    { id: 'pink',    cat: 'pasta',   name: 'بينك باستا',            en: 'Pink Pasta',           price: 21, img: 'img/pink.webp',
       desc: 'صلصة بينك كريمية غنية مع الريحان وجبن البارميزان الفاخر' },
-    { id: 'lasagna', cat: 'lasagna', name: 'كلاسيك لازانيا',        en: 'Classic Lasagna',      price: 23, img: '8.jpg',
+    { id: 'lasagna', cat: 'lasagna', name: 'كلاسيك لازانيا',        en: 'Classic Lasagna',      price: 23, img: 'img/classic.webp',
       desc: 'طبقات اللازانيا الكلاسيكية باللحم المفروم والبارميزان المخبوزة بإتقان' },
-    { id: 'spicy',   cat: 'lasagna', name: 'سبايسي لازانيا',        en: 'Spicy Lasagna',        price: 24, img: '9.jpg',  badge: 'حار 🌶️',
+    { id: 'spicy',   cat: 'lasagna', name: 'سبايسي لازانيا',        en: 'Spicy Lasagna',        price: 24, img: 'img/spicy.webp',  badge: 'حار 🌶️',
       desc: 'لازانيا غنية باللحم والجبن مع لمسة حارة ومميزة لعشاق السبايسي' }
   ];
 
@@ -366,9 +372,9 @@
 
   function renderMenu() {
     $('#menuGrid').innerHTML = MENU.map((item, idx) => `
-      <article class="bg-white rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
+      <article class="bg-cream-light rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
         <div class="relative aspect-[4/3] rounded-[20px] overflow-hidden bg-sage-soft">
-          <img src="${item.img}" alt="${item.name}" class="w-full h-full object-cover" ${idx < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
+          <img src="${item.img}" alt="${item.name}" width="800" height="600" class="w-full h-full object-cover" ${idx < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
                onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')" />
           <div class="hidden absolute inset-0 grid place-items-center text-6xl">🍝</div>
           ${item.badge ? `<span class="absolute top-3 right-3 bg-white/95 text-rust-dark text-xs font-bold px-3 py-1.5 rounded-full shadow">${item.badge}</span>` : ''}
@@ -420,14 +426,12 @@
     if (bump) {
       [$('#barCount'), hc].forEach(el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); });
     }
-    $('#sumSubtotal').textContent = total;
-    $('#sumTotal').textContent = total;
-    $('#btnTotal').textContent = total;
+    ['#sumSubtotal', '#sumTotal', '#btnTotal'].forEach(s => { const el = $(s); if (el) el.textContent = total; });
   }
 
   function renderSheetItems() {
     $('#sheetItems').innerHTML = cartItems().map(i => `
-      <li class="flex items-center gap-3 bg-white rounded-2xl border border-sage-line p-2.5">
+      <li class="flex items-center gap-3 bg-cream-light rounded-2xl border border-sage-line p-2.5">
         <div class="w-14 h-14 rounded-xl overflow-hidden bg-sage-soft shrink-0 grid place-items-center text-2xl">
           <img src="${i.img}" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(document.createTextNode('🍝'))" />
         </div>
@@ -624,17 +628,18 @@
     $('#checkoutView').classList.add('hidden');
     $('#successView').classList.remove('hidden');
 
+    // إعادة الزر لحالته قبل تحديث المجاميع (الزر يحتوي على #btnTotal)
+    btn.disabled = false;
+    btn.innerHTML = btnHTML;
+    submitting = false;
+
     // تفريغ السلة
     const ids = Object.keys(cart);
     cart = {};
     store.set(CART_KEY, cart);
     ids.forEach(refreshCtrl);
-    updateCartUI(false);
+    try { updateCartUI(false); } catch (e) {}
     $('#fNotes').value = '';
-
-    btn.disabled = false;
-    btn.innerHTML = btnHTML;
-    submitting = false;
 
     window.location.href = waUrl;
   }
