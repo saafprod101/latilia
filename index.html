@@ -94,6 +94,7 @@
     #cartBar { transition: transform .35s cubic-bezier(.2,.9,.3,1.2); }
     #sheet { transition: transform .32s cubic-bezier(.2,.8,.2,1); }
     #sheetOverlay { transition: opacity .25s ease; }
+    #payGroup.is-invalid .pay-opt { border-color: #ef4444; }
     .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -234,9 +235,22 @@
             </div>
 
             <div>
-              <label for="fAddress" class="label">وصف العنوان / موقع المنزل</label>
-              <input id="fAddress" name="address" type="text" class="field" placeholder="الشارع، أقرب معلم، رقم المنزل" autocomplete="street-address" />
-              <p class="err" data-err="address">فضلاً اكتب وصفاً واضحاً للعنوان</p>
+              <span class="label" id="payLabel">طريقة الدفع <span class="text-muted font-normal">(عند الاستلام)</span></span>
+              <div id="payGroup" role="radiogroup" aria-labelledby="payLabel" tabindex="-1" class="grid grid-cols-2 gap-3 outline-none">
+                <label class="cursor-pointer">
+                  <input type="radio" name="payment" value="كاش" class="sr-only peer" />
+                  <span class="pay-opt flex items-center justify-center gap-2 h-14 rounded-2xl border-2 border-sage-line bg-cream-light font-bold text-ink transition peer-checked:border-sage peer-checked:bg-sage peer-checked:text-cream peer-focus-visible:ring-4 peer-focus-visible:ring-sage/20">
+                    <i data-lucide="banknote" class="w-5 h-5"></i> كاش
+                  </span>
+                </label>
+                <label class="cursor-pointer">
+                  <input type="radio" name="payment" value="شبكة" class="sr-only peer" />
+                  <span class="pay-opt flex items-center justify-center gap-2 h-14 rounded-2xl border-2 border-sage-line bg-cream-light font-bold text-ink transition peer-checked:border-sage peer-checked:bg-sage peer-checked:text-cream peer-focus-visible:ring-4 peer-focus-visible:ring-sage/20">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i> شبكة
+                  </span>
+                </label>
+              </div>
+              <p class="err" data-err="payment">فضلاً اختر طريقة الدفع</p>
             </div>
 
             <div>
@@ -536,7 +550,8 @@
       : 'رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام';
     const districtSel = $('#fDistrict').value;
     const districtOther = $('#fDistrictOther').value.trim();
-    const address = $('#fAddress').value.trim();
+    const payEl = document.querySelector('input[name="payment"]:checked');
+    const payment = payEl ? payEl.value : '';
     const notes = $('#fNotes').value.trim();
 
     const checks = [
@@ -544,7 +559,7 @@
       ['phone', $('#fPhone'), phoneFormatOk && !phoneFake],
       ['district', $('#fDistrict'), !!districtSel],
       ['districtOther', $('#fDistrictOther'), districtSel !== 'أخرى' || districtOther.length >= 2],
-      ['address', $('#fAddress'), address.length >= 4]
+      ['payment', $('#payGroup'), payment === 'كاش' || payment === 'شبكة']
     ];
     let firstBad = null;
     checks.forEach(([k, el, ok]) => { setError(k, el, !ok); if (!ok && !firstBad) firstBad = el; });
@@ -554,7 +569,7 @@
       return null;
     }
     const district = districtSel === 'أخرى' ? districtOther : districtSel;
-    return { name, phone, district, districtSel, districtOther, address, notes };
+    return { name, phone, district, districtSel, districtOther, payment, notes };
   }
 
   function prefillCustomer() {
@@ -564,7 +579,10 @@
     if (!$('#fPhone').value) $('#fPhone').value = c.phone || '';
     if (!$('#fDistrict').value && c.districtSel) { $('#fDistrict').value = c.districtSel; toggleOther(); }
     if (!$('#fDistrictOther').value) $('#fDistrictOther').value = c.districtOther || '';
-    if (!$('#fAddress').value) $('#fAddress').value = c.address || '';
+    if (c.payment && !document.querySelector('input[name="payment"]:checked')) {
+      const r = document.querySelector(`input[name="payment"][value="${c.payment}"]`);
+      if (r) r.checked = true;
+    }
   }
 
   function toggleOther() {
@@ -590,7 +608,7 @@
       name: c.name,
       phone: c.phone,
       district: c.district,
-      address: c.address,
+      payment: c.payment,
       notes: c.notes,
       items,
       itemsText: items.map(i => `${i.qty}x ${i.name}`).join(' | '),
@@ -608,12 +626,13 @@
       `🧾 رقم الطلب: ${o.orderId}`,
       `👤 الاسم: ${o.name}`,
       `📱 الجوال: ${o.phone}`,
-      `📍 العنوان: الأحساء - حي ${o.district} - ${o.address}`,
+      `📍 العنوان: الأحساء - حي ${o.district}`,
       '--------------------------------',
       '📋 تفاصيل الطلب:',
       ...o.items.map(i => `• ${i.qty}x ${i.name} - ${i.lineTotal} ر.س`),
       '--------------------------------',
       `💵 الإجمالي: ${o.total} ر.س`,
+      `💳 طريقة الدفع: ${o.payment}`,
       `📝 ملاحظات: ${o.notes || 'لا يوجد'}`
     ].join('\n');
   }
@@ -653,7 +672,7 @@
       await Promise.race([sendToSheet(order), new Promise(r => setTimeout(r, 1500))]);
     }
 
-    store.set(CUSTOMER_KEY, { name: c.name, phone: c.phone, districtSel: c.districtSel, districtOther: c.districtOther, address: c.address });
+    store.set(CUSTOMER_KEY, { name: c.name, phone: c.phone, districtSel: c.districtSel, districtOther: c.districtOther, payment: c.payment });
 
     // عرض شاشة النجاح (مفيدة داخل متصفح سناب إن لم يفتح واتساب تلقائياً)
     $('#successOrderId').textContent = order.orderId;
@@ -714,10 +733,11 @@
     if (e.target.value !== v) e.target.value = v;
   });
   $('#fDistrict').addEventListener('change', toggleOther);
-  ['fName', 'fPhone', 'fDistrict', 'fDistrictOther', 'fAddress'].forEach(fid => {
+  ['fName', 'fPhone', 'fDistrict', 'fDistrictOther'].forEach(fid => {
     const el = document.getElementById(fid);
     el.addEventListener('input', () => el.classList.remove('is-invalid'));
   });
+  $('#payGroup').addEventListener('change', () => setError('payment', $('#payGroup'), false));
 
   /* =========================================================
      التشغيل

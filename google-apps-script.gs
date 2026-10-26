@@ -7,7 +7,7 @@
  * حتى يبقى نفس الرابط الموجود في index.html.
  */
 const SHEET_ID = '1xUu3Bi93emP5VmXz1dWllvPvhnmZzBxwHOig81ldozs';
-const HEADERS = ['رقم الطلب', 'التاريخ والوقت', 'الاسم', 'الجوال', 'الحي', 'العنوان', 'الأطباق', 'عدد الأطباق', 'الإجمالي', 'ملاحظات', 'المصدر', 'الحالة'];
+const HEADERS = ['رقم الطلب', 'التاريخ والوقت', 'الاسم', 'الجوال', 'الحي', 'طريقة الدفع', 'الأطباق', 'عدد الأطباق', 'الإجمالي', 'ملاحظات', 'المصدر', 'الحالة'];
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
@@ -24,7 +24,7 @@ function doPost(e) {
       safe_(data.name),
       "'" + String(data.phone || '').replace(/\D/g, ''),   // لحفظ الصفر الأول في رقم الجوال
       safe_(data.district),
-      safe_(data.address),
+      safe_(data.payment || data.address),   // طريقة الدفع: كاش / شبكة
       safe_(data.itemsText),
       Number(data.itemsCount || 0),
       Number(data.total || 0) + ' ر.س',
@@ -47,6 +47,10 @@ function doGet() {
 
 function getSheet_() {
   var sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
+  // تحديث عنوان العمود القديم «العنوان» إلى «طريقة الدفع»
+  if (sheet.getLastRow() > 0 && sheet.getRange(1, 6).getValue() === 'العنوان') {
+    sheet.getRange(1, 6).setValue('طريقة الدفع');
+  }
   if (sheet.getLastRow() === 0) {
     sheet.setName('الطلبات');
     sheet.appendRow(HEADERS);
@@ -54,7 +58,7 @@ function getSheet_() {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length)
       .setFontWeight('bold').setBackground('#606D39').setFontColor('#FFF0D8').setHorizontalAlignment('center');
-    sheet.setColumnWidth(6, 240);
+    sheet.setColumnWidth(6, 120);
     sheet.setColumnWidth(7, 280);
     var rule = SpreadsheetApp.newDataValidation()
       .requireValueInList(['جديد', 'قيد التحضير', 'خرج للتوصيل', 'تم التسليم', 'ملغي'], true).build();
