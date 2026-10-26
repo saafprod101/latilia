@@ -21,6 +21,11 @@
 
   <!-- Preload first dish images -->
   <link rel="preload" as="image" href="img/lomi.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/pesto.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/rubi.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/pink.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/classic.webp" type="image/webp" />
+  <link rel="preload" as="image" href="img/spicy.webp" type="image/webp" />
   <link rel="preload" as="image" href="img/logo.svg" type="image/svg+xml" />
 
   <!-- Tailwind CSS -->
@@ -394,8 +399,8 @@
     $('#menuGrid').innerHTML = MENU.map((item, idx) => `
       <article class="bg-cream-light rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
         <div class="relative aspect-[4/3] rounded-[20px] overflow-hidden bg-sage-soft">
-          <img src="${item.img}" alt="${item.name}" width="800" height="600" class="w-full h-full object-cover" ${idx < 2 ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"
-               onerror="this.style.display='none';this.nextElementSibling.classList.remove('hidden')" />
+          <img src="${item.img}" alt="${item.name}" width="800" height="600" class="w-full h-full object-cover" loading="eager" fetchpriority="${idx < 2 ? 'high' : 'auto'}"
+               onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src=this.src.replace('.webp','.jpg');}else{this.style.display='none';this.nextElementSibling.classList.remove('hidden');}" />
           <div class="hidden absolute inset-0 grid place-items-center text-6xl">🍝</div>
           ${item.badge ? `<span class="absolute top-3 right-3 bg-white/95 text-rust-dark text-xs font-bold px-3 py-1.5 rounded-full shadow">${item.badge}</span>` : ''}
         </div>
