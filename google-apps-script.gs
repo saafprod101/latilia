@@ -1,104 +1,71 @@
 /**
  * لتيليا | Latilia — استقبال طلبات صفحة الهبوط في Google Sheets
- * ---------------------------------------------------------------
- * طريقة التركيب:
- * 1) افتح Google Sheet جديد ← الإضافات (Extensions) ← Apps Script
- * 2) احذف الكود الموجود والصق هذا الملف كاملاً ← حفظ
- * 3) نشر (Deploy) ← نشر جديد (New deployment) ← النوع: تطبيق ويب (Web app)
- *      - التنفيذ باسم (Execute as): أنا (Me)
- *      - من لديه صلاحية الوصول (Who has access): أي شخص (Anyone)
- * 4) وافق على الصلاحيات، ثم انسخ رابط Web app (ينتهي بـ /exec)
- * 5) ضعه في index.html داخل: const GOOGLE_SHEET_URL = "الرابط";
+ * الشيت: طلبات لتيليا - Latilia Orders
+ * مشروع Apps Script: Latilia Orders Webhook (منشور كـ Web App: Execute as Me، Access: Anyone)
  *
- * ملاحظة: عند تعديل هذا الكود لاحقاً ← Deploy ← Manage deployments ← تعديل ← Version: New version
- * حتى يبقى نفس الرابط ويعمل التحديث.
+ * عند تعديل الكود: Deploy ← Manage deployments ← تعديل (القلم) ← Version: New version ← Deploy
+ * حتى يبقى نفس الرابط الموجود في index.html.
  */
-
-const SHEET_NAME = 'الطلبات';
-const TIMEZONE = 'Asia/Riyadh';
-const HEADERS = [
-  'رقم الطلب', 'التاريخ والوقت', 'الاسم', 'الجوال', 'الحي', 'العنوان التفصيلي',
-  'الأطباق', 'عدد الأطباق', 'الإجمالي (ر.س)', 'ملاحظات', 'المصدر', 'الحملة', 'الحالة'
-];
-const STATUSES = ['جديد', 'قيد التحضير', 'خرج للتوصيل', 'تم التسليم', 'ملغي'];
+const SHEET_ID = '1xUu3Bi93emP5VmXz1dWllvPvhnmZzBxwHOig81ldozs';
+const HEADERS = ['رقم الطلب', 'التاريخ والوقت', 'الاسم', 'الجوال', 'الحي', 'العنوان', 'الأطباق', 'عدد الأطباق', 'الإجمالي', 'ملاحظات', 'المصدر', 'الحالة'];
 
 function doPost(e) {
-  const lock = LockService.getScriptLock();
-  lock.waitLock(20000); // يمنع تداخل الطلبات المتزامنة
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) {
+    return json_({ result: 'busy' });
+  }
   try {
-    const raw = (e && e.postData && e.postData.contents) || '{}';
-    const data = JSON.parse(raw);
-    const sheet = getSheet_();
-
-    const items = Array.isArray(data.items) ? data.items : [];
-    const itemsText = items.length
-      ? items.map(function (i) { return i.qty + 'x ' + i.name + ' (' + (i.qty * i.price) + ' ر.س)'; }).join('\n')
-      : (data.itemsText || '');
-    const itemsCount = items.reduce(function (s, i) { return s + Number(i.qty || 0); }, 0) || Number(data.itemsCount || 0);
-    const total = items.reduce(function (s, i) { return s + Number(i.qty || 0) * Number(i.price || 0); }, 0) || Number(data.total || 0);
+    var sheet = getSheet_();
+    var data = JSON.parse(e.postData.contents);
 
     sheet.appendRow([
       safe_(data.orderId),
-      Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd HH:mm'),
+      Utilities.formatDate(new Date(), 'Asia/Riyadh', 'yyyy-MM-dd HH:mm'),
       safe_(data.name),
-      "'" + String(data.phone || '').replace(/\D/g, ''), // للحفاظ على الصفر في بداية الرقم
+      "'" + String(data.phone || '').replace(/\D/g, ''),   // لحفظ الصفر الأول في رقم الجوال
       safe_(data.district),
       safe_(data.address),
-      safe_(itemsText),
-      itemsCount,
-      total,
-      safe_(data.notes),
+      safe_(data.itemsText),
+      Number(data.itemsCount || 0),
+      Number(data.total || 0) + ' ر.س',
+      safe_(data.notes || 'لا يوجد'),
       safe_(data.source),
-      safe_(data.campaign),
       'جديد'
     ]);
-
-    return json_({ ok: true, orderId: data.orderId || null });
-  } catch (err) {
-    return json_({ ok: false, error: String(err) });
+    return json_({ result: 'success', orderId: data.orderId || null });
+  } catch (error) {
+    return json_({ result: 'error', error: error.toString() });
   } finally {
     lock.releaseLock();
   }
 }
 
-// للتأكد أن الرابط يعمل: افتح رابط /exec في المتصفح
+// افتح رابط /exec في المتصفح للتأكد أن الربط يعمل
 function doGet() {
-  return ContentService.createTextOutput('✅ Latilia orders webhook is running');
+  return ContentService.createTextOutput('Latilia orders webhook is running');
 }
 
-/* ---------------- Helpers ---------------- */
-
 function getSheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
-
+  var sheet = SpreadsheetApp.openById(SHEET_ID).getSheets()[0];
   if (sheet.getLastRow() === 0) {
+    sheet.setName('الطلبات');
     sheet.appendRow(HEADERS);
     sheet.setRightToLeft(true);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length)
-      .setFontWeight('bold')
-      .setBackground('#5D6D4E')
-      .setFontColor('#FBF9F5')
-      .setHorizontalAlignment('center');
-    sheet.setColumnWidth(1, 120);
-    sheet.setColumnWidth(2, 140);
+      .setFontWeight('bold').setBackground('#606D39').setFontColor('#FFF0D8').setHorizontalAlignment('center');
     sheet.setColumnWidth(6, 240);
-    sheet.setColumnWidth(7, 260);
-    sheet.setColumnWidth(10, 200);
-    sheet.getRange('G:G').setWrap(true);
-
-    // قائمة منسدلة لحالة الطلب
-    const rule = SpreadsheetApp.newDataValidation().requireValueInList(STATUSES, true).build();
-    sheet.getRange(2, HEADERS.length, 1000, 1).setDataValidation(rule);
+    sheet.setColumnWidth(7, 280);
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(['جديد', 'قيد التحضير', 'خرج للتوصيل', 'تم التسليم', 'ملغي'], true).build();
+    sheet.getRange(2, HEADERS.length, 2000, 1).setDataValidation(rule);
   }
   return sheet;
 }
 
-// يمنع حقن المعادلات (Formula Injection) في الشيت
+// يمنع تحويل النص إلى معادلة داخل الشيت
 function safe_(v) {
-  const s = String(v == null ? '' : v).slice(0, 1000);
+  var s = String(v == null ? '' : v).slice(0, 1000);
   return /^[=+\-@]/.test(s) ? "'" + s : s;
 }
 
@@ -106,21 +73,7 @@ function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// اختبار يدوي من محرر Apps Script: اختر testDoPost ثم Run
-function testDoPost() {
-  const res = doPost({
-    postData: {
-      contents: JSON.stringify({
-        orderId: 'LT-TEST-0001',
-        name: 'تجربة',
-        phone: '0500000000',
-        district: 'المزروع',
-        address: 'شارع تجريبي',
-        notes: 'طلب اختبار',
-        items: [{ name: 'باستا اللومي الحساوي', qty: 2, price: 25 }],
-        source: 'test'
-      })
-    }
-  });
-  Logger.log(res.getContent());
+// تشغيل يدوي لإنشاء العناوين: اختر setup ثم Run
+function setup() {
+  getSheet_();
 }
