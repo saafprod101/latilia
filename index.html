@@ -28,6 +28,14 @@
   <link rel="preload" as="image" href="img/spicy.webp" type="image/webp" />
   <link rel="preload" as="image" href="img/logo.svg" type="image/svg+xml" />
 
+  <!-- تفعيل الحركة فقط إن لم يطلب المستخدم تقليل الحركة -->
+  <script>
+    try {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window && Element.prototype.animate)
+        document.documentElement.classList.add('motion');
+    } catch (e) {}
+  </script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -61,7 +69,8 @@
       }
       .field.is-invalid { @apply border-red-500 ring-4 ring-red-500/10; }
       .label { @apply block text-sm font-bold text-ink mb-1.5; }
-      .err { @apply hidden text-xs text-red-600 mt-1.5 font-medium; }
+      .err { @apply text-xs text-red-600 mt-1.5 font-medium; display: none; }
+      .err.on { display: block; }
       .chip { @apply inline-flex items-center gap-1.5 bg-white/10 text-cream text-xs font-medium px-3 py-1.5 rounded-full border border-white/15; }
       .tab { @apply h-10 px-5 rounded-full text-sm font-bold border transition whitespace-nowrap; }
       .tab-active { @apply bg-sage text-white border-sage; }
@@ -102,13 +111,100 @@
     #payGroup.is-invalid .pay-opt { border-color: #ef4444; }
     .spinner { width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* =====================================================
+       نظام الحركة (Motion) — تجربة الجوال
+       كل الحركات تعتمد transform/opacity فقط لتبقى سلسة على الأجهزة الضعيفة
+       ===================================================== */
+    :root { --ease-out: cubic-bezier(.2,.8,.2,1); --ease-spring: cubic-bezier(.34,1.56,.64,1); }
+    button, a, label, select { touch-action: manipulation; }          /* إلغاء تأخير اللمس */
+    #sheetBody { overscroll-behavior: contain; }                        /* لا تتحرك الصفحة خلف النافذة */
+
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    /* 1) دخول الواجهة: العناصر تصعد بالتتابع */
+    .motion .hero-in > * { animation: rise .6s var(--ease-out) both; }
+    .motion .hero-in > *:nth-child(2) { animation-delay: .07s; }
+    .motion .hero-in > *:nth-child(3) { animation-delay: .14s; }
+    .motion .hero-in > *:nth-child(4) { animation-delay: .21s; }
+    @keyframes barsDrop { from { transform: translateY(-100%); } to { transform: none; } }
+    .motion .bars.drop i { animation: barsDrop .55s var(--ease-spring) both; }
+    .motion .bars.drop i:nth-child(1) { animation-delay: .25s; }
+    .motion .bars.drop i:nth-child(2) { animation-delay: .33s; }
+    .motion .bars.drop i:nth-child(3) { animation-delay: .41s; }
+
+    /* 2) ظهور البطاقات عند التمرير */
+    .motion .reveal { opacity: 0; transform: translateY(22px); }
+    .motion .reveal.in { opacity: 1; transform: none; transition: opacity .5s var(--ease-out), transform .6s var(--ease-out); transition-delay: var(--d, 0ms); }
+
+    /* 3) صور الأطباق: لمعان أثناء التحميل ثم ظهور ناعم */
+    .img-wrap { background: linear-gradient(100deg, #EEEBD3 30%, #F7F1DC 50%, #EEEBD3 70%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+    .img-wrap.done { animation: none; background: #EEEBD3; }
+    @keyframes shimmer { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+    .motion .dish-img { opacity: 0; transform: scale(1.05); transition: opacity .45s ease, transform .8s var(--ease-out); }
+    .motion .dish-img.loaded { opacity: 1; transform: none; }
+
+    /* 4) تبويبات بمؤشر منزلق */
+    .tab-ind { display: none; }
+    .motion .tab-ind { display: block; position: absolute; top: 0; left: 0; height: 40px; border-radius: 999px; background: #606D39; z-index: 0;
+                       transition: transform .38s var(--ease-out), width .38s var(--ease-out); }
+    .motion #tabs .tab { position: relative; z-index: 1; }
+    .motion #tabs .tab-active { background: transparent; border-color: transparent; color: #fff; }
+
+    /* 5) الطبق يطير إلى السلة */
+    .fly-x { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; will-change: transform; }
+    .fly-y { width: 56px; height: 56px; border-radius: 999px; background: #EEEBD3 center/cover no-repeat; border: 3px solid #FFF8EC;
+             box-shadow: 0 10px 24px -6px rgba(31,36,31,.45); will-change: transform; }
+
+    /* 6) تنبيه زر إتمام الطلب عند كل إضافة */
+    @keyframes ring { from { box-shadow: 0 0 0 0 rgba(221,98,39,.6); } to { box-shadow: 0 0 0 14px rgba(221,98,39,0); } }
+    .ring { animation: ring .7s ease-out; }
+
+    /* 7) أخطاء النموذج: اهتزاز + ظهور الرسالة */
+    @keyframes shake { 10%,90% { transform: translateX(-1px); } 20%,80% { transform: translateX(3px); } 30%,50%,70% { transform: translateX(-6px); } 40%,60% { transform: translateX(6px); } }
+    .shake { animation: shake .42s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes errIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .motion .err.on { animation: errIn .22s ease both; }
+    /* شبكة أمان: بعد ظهور الصفحة بثوانٍ تُعرض كل العناصر حتى لو تعطلت الحركة في متصفح ما */
+    .motion-safe .hero-in > *, .motion-safe .bars.drop i { animation: none !important; opacity: 1 !important; transform: none !important; }
+
+    /* 8) علامة ✓ عند اكتمال رقم الجوال */
+    .phone-ok { position: absolute; left: 14px; top: 50%; width: 24px; height: 24px; border-radius: 999px; background: #606D39; color: #FFF0D8;
+                display: grid; place-items: center; opacity: 0; transform: translateY(-50%) scale(.4); pointer-events: none;
+                transition: opacity .2s ease, transform .35s var(--ease-spring); }
+    .phone-ok.on { opacity: 1; transform: translateY(-50%) scale(1); }
+
+    /* 9) اختيار الدفع: نبضة للأيقونة */
+    .motion .peer:checked + .pay-opt svg { animation: pop .3s var(--ease-spring); }
+
+    /* 10) نافذة الطلب: دخول العناصر بالتتابع + مقبض السحب */
+    .motion #sheetItems.enter > li { animation: rise .42s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 50ms + 120ms); }
+    #sheetHead { touch-action: none; cursor: grab; }
+    #sheet.dragging { transition: none !important; }
+
+    /* 11) شاشة النجاح: رسم علامة الصح */
+    .ck-c { stroke-dasharray: 146; stroke-dashoffset: 0; }
+    .ck-p { stroke-dasharray: 40; stroke-dashoffset: 0; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    .motion #successView.show .ck-c { stroke-dashoffset: 146; animation: draw .5s ease-out forwards; }
+    .motion #successView.show .ck-p { stroke-dashoffset: 40; animation: draw .35s .42s ease-out forwards; }
+    .motion #successView.show .s-rise { animation: rise .5s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+
+    /* 12) ظل الهيدر عند التمرير */
+    #siteHeader { transition: box-shadow .25s ease; }
+    #siteHeader.scrolled { box-shadow: 0 8px 24px -14px rgba(31,36,31,.45); }
+
+    /* احترام إعداد «تقليل الحركة» في الجوال */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
   </style>
 </head>
 
 <body class="bg-cream text-ink antialiased min-h-screen">
 
   <!-- ===================== HEADER ===================== -->
-  <header class="sticky top-0 z-30 bg-cream/90 backdrop-blur-md border-b border-sage-line/70">
+  <header id="siteHeader" class="sticky top-0 z-30 bg-cream/90 backdrop-blur-md border-b border-sage-line/70">
     <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
       <a href="#" class="block" aria-label="لتيليا - Latilia Specialty Italian Restaurant">
         <img src="img/logo.svg" alt="لتيليا" width="150" height="40" class="h-10 w-auto" />
@@ -130,10 +226,10 @@
     <!-- ===================== HERO ===================== -->
     <section class="hero-pattern rounded-[28px] mt-4 text-cream relative overflow-hidden">
       <!-- الأشرطة الثلاثة -->
-      <div class="bars absolute top-0 left-6" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="bars drop absolute top-0 left-6" aria-hidden="true"><i></i><i></i><i></i></div>
       <!-- أيقونة الهوية كخلفية -->
       <img src="img/icon-cream.svg" alt="" aria-hidden="true" class="absolute -left-6 top-10 w-36 opacity-[.13] pointer-events-none" />
-      <div class="relative px-5 pt-7 pb-24">
+      <div class="hero-in relative px-5 pt-7 pb-24">
         <p class="text-[11px] tracking-[.25em] text-cream/70 mb-2" dir="ltr" style="text-align:right">SPECIALTY ITALIAN RESTAURANT</p>
         <h1 class="font-display font-bold text-[26px] leading-[1.35]">باستا إيطالية طازجة<br/><span class="text-[#F7A577]">بلمسة أحسائية</span></h1>
         <p class="text-cream/85 text-sm mt-2">اختر طبقك، وأكّد طلبك عبر واتساب خلال ثوانٍ.</p>
@@ -148,7 +244,8 @@
     </section>
 
     <!-- ===================== FILTER TABS ===================== -->
-    <nav class="flex gap-2 overflow-x-auto no-scrollbar mt-5 -mx-4 px-4" id="tabs" aria-label="التصنيفات">
+    <nav class="relative flex gap-2 overflow-x-auto no-scrollbar mt-5 -mx-4 px-4" id="tabs" aria-label="التصنيفات">
+      <span id="tabInd" class="tab-ind" aria-hidden="true"></span>
       <button class="tab tab-active" data-filter="all">الكل</button>
       <button class="tab tab-idle" data-filter="pasta">باستا 🍝</button>
       <button class="tab tab-idle" data-filter="lasagna">لازانيا 🧀</button>
@@ -175,7 +272,7 @@
           <span class="block font-display font-bold text-lg"><span id="barTotal">0</span> <span class="text-sm font-medium">ر.س</span></span>
         </span>
       </button>
-      <button data-action="checkout" class="h-12 px-5 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.97] transition font-bold text-[15px] whitespace-nowrap">
+      <button id="barCta" data-action="checkout" class="h-12 px-5 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.97] transition font-bold text-[15px] whitespace-nowrap">
         إتمام الطلب 🛒
       </button>
     </div>
@@ -187,8 +284,8 @@
   <section id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" class="fixed inset-x-0 bottom-0 z-50 translate-y-full">
     <div class="max-w-xl mx-auto bg-cream rounded-t-[28px] flex flex-col shadow-bar" style="max-height: 92dvh; max-height: 92vh;">
       <!-- Handle + title -->
-      <div class="pt-2.5 pb-3 px-5 border-b border-sage-line/70 shrink-0">
-        <div class="w-11 h-1.5 rounded-full bg-sage-line mx-auto mb-3"></div>
+      <div id="sheetHead" class="pt-2.5 pb-3 px-5 border-b border-sage-line/70 shrink-0">
+        <div class="w-12 h-1.5 rounded-full bg-sage-line mx-auto mb-3" title="اسحب للأسفل للإغلاق"></div>
         <div class="flex items-center justify-between">
           <h2 id="sheetTitle" class="font-display font-bold text-xl">إتمام الطلب</h2>
           <button data-action="close-sheet" class="w-10 h-10 rounded-full bg-white border border-sage-line grid place-items-center" aria-label="إغلاق">
@@ -221,7 +318,12 @@
 
             <div>
               <label for="fPhone" class="label">رقم الجوال</label>
-              <input id="fPhone" name="phone" type="tel" inputmode="numeric" dir="ltr" maxlength="10" class="field text-right" placeholder="05xxxxxxxx" autocomplete="tel" />
+              <div class="relative">
+                <input id="fPhone" name="phone" type="tel" inputmode="numeric" dir="ltr" maxlength="10" class="field text-right pl-12" placeholder="05xxxxxxxx" autocomplete="tel" />
+                <span id="phoneOk" class="phone-ok" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+                </span>
+              </div>
               <p class="err" data-err="phone">رقم الجوال يجب أن يبدأ بـ 05 ويتكون من 10 أرقام</p>
             </div>
 
@@ -295,14 +397,17 @@
       <!-- Success view -->
       <div id="successView" class="hidden px-6 py-8 text-center overflow-y-auto" style="padding-bottom: calc(24px + env(safe-area-inset-bottom));">
         <div class="w-20 h-20 mx-auto rounded-full bg-sage-soft grid place-items-center pop">
-          <i data-lucide="check" class="w-10 h-10 text-sage"></i>
+          <svg viewBox="0 0 52 52" class="w-12 h-12" aria-hidden="true">
+            <circle class="ck-c" cx="26" cy="26" r="23" fill="none" stroke="#606D39" stroke-width="3"/>
+            <path class="ck-p" d="M15 27l7 7 15-16" fill="none" stroke="#606D39" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-        <h3 class="font-display font-bold text-2xl mt-4">تم تجهيز طلبك!</h3>
-        <p class="text-muted mt-2 text-sm leading-relaxed">رقم طلبك: <b id="successOrderId" class="text-ink font-display" dir="ltr"></b><br/>اضغط «إرسال» في واتساب ليصلنا طلبك ونبدأ التحضير 🌿</p>
-        <a id="waFallback" href="#" class="mt-6 w-full h-14 rounded-2xl bg-[#25D366] text-white font-bold flex items-center justify-center gap-2">
+        <h3 class="s-rise font-display font-bold text-2xl mt-4" style="--d:.35s">تم تجهيز طلبك!</h3>
+        <p class="s-rise text-muted mt-2 text-sm leading-relaxed" style="--d:.45s">رقم طلبك: <b id="successOrderId" class="text-ink font-display" dir="ltr"></b><br/>اضغط «إرسال» في واتساب ليصلنا طلبك ونبدأ التحضير 🌿</p>
+        <a id="waFallback" href="#" class="s-rise mt-6 w-full h-14 rounded-2xl bg-[#25D366] text-white font-bold flex items-center justify-center gap-2" style="--d:.55s">
           <i data-lucide="message-circle" class="w-5 h-5"></i> لم يفتح واتساب؟ اضغط هنا
         </a>
-        <button data-action="back-to-menu" class="mt-3 w-full h-12 rounded-2xl bg-white border border-sage-line font-bold text-ink">العودة للمنيو</button>
+        <button data-action="back-to-menu" class="s-rise mt-3 w-full h-12 rounded-2xl bg-white border border-sage-line font-bold text-ink" style="--d:.62s">العودة للمنيو</button>
       </div>
     </div>
   </section>
@@ -345,6 +450,7 @@
   let cart = {};
   let sheetOpen = false;
   let submitting = false;
+  const REDUCED = !document.documentElement.classList.contains('motion');   // الحركة مطفأة لمن يفضّل تقليلها
   const PAGE_LOADED_AT = Date.now();   // (9) لقياس سرعة الإرسال: البشر يحتاجون أكثر من 3 ثوانٍ
 
   const store = {
@@ -381,6 +487,74 @@
   };
 
   /* =========================================================
+     أدوات الحركة واللمس
+     ========================================================= */
+  // اهتزاز خفيف (يعمل على أندرويد، ويتجاهله آيفون بصمت)
+  function buzz(p) { try { if (!REDUCED && navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+
+  // إعادة تشغيل حركة CSS على عنصر
+  function replay(el, cls) { if (!el || REDUCED) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+  // عدّاد أرقام متحرك للمجاميع
+  function tweenNum(el, to) {
+    if (!el) return;
+    const had = el.dataset.v !== undefined;
+    const from = Number(el.dataset.v || 0);
+    el.dataset.v = to;
+    if (!had || REDUCED || from === to) { el.textContent = to; return; }
+    const t0 = performance.now(), d = 320;
+    cancelAnimationFrame(el._raf);
+    const step = t => {
+      const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = Math.round(from + (to - from) * e);
+      if (k < 1) el._raf = requestAnimationFrame(step);
+    };
+    el._raf = requestAnimationFrame(step);
+    setTimeout(() => { if (Number(el.dataset.v) === to) el.textContent = to; }, d + 80);   // ضمان القيمة النهائية
+  }
+
+  // صورة الطبق تطير من البطاقة إلى عدّاد السلة — يؤكد للعميل أن الإضافة تمت
+  function flyToCart(fromEl) {
+    if (REDUCED) return false;
+    const card = fromEl.closest('#menuGrid article');
+    const img = card && card.querySelector('img');
+    if (!img) return false;
+    const s = img.getBoundingClientRect();
+    const bar = $('#cartBar').getBoundingClientRect(), bc = $('#barCount').getBoundingClientRect();
+    const sx = s.left + s.width / 2 - 28, sy = s.top + s.height / 2 - 28;
+    const tx = bc.left + bc.width / 2 - 28;
+    const ty = innerHeight - bar.height + (bc.top - bar.top) + bc.height / 2 - 28;   // موضع العدّاد بعد ظهور الشريط
+    const x = document.createElement('div'), y = document.createElement('div');
+    x.className = 'fly-x'; y.className = 'fly-y'; x.setAttribute('aria-hidden', 'true');
+    y.style.backgroundImage = `url("${img.currentSrc || img.src}")`;
+    x.appendChild(y); document.body.appendChild(x);
+    const d = 680;
+    x.animate([{ transform: `translateX(${sx}px)` }, { transform: `translateX(${tx}px)` }], { duration: d, easing: 'cubic-bezier(.4,0,.6,1)', fill: 'forwards' });
+    const a = y.animate([
+      { transform: `translateY(${sy}px) scale(1.5)`, opacity: .2 },
+      { transform: `translateY(${sy - 70}px) scale(1.1)`, opacity: 1, offset: .3 },
+      { transform: `translateY(${ty}px) scale(.45)`, opacity: .95 }
+    ], { duration: d, easing: 'cubic-bezier(.45,0,.6,1)', fill: 'forwards' });
+    a.onfinish = () => { x.remove(); landBump(); };
+    setTimeout(() => x.remove(), d + 400);
+    return true;
+  }
+
+  // لحظة وصول الطبق: نبضة للعدّاد وتنبيه زر إتمام الطلب
+  function landBump() {
+    replay($('#barCount'), 'bump');
+    replay($('#headerCount'), 'bump');
+    replay($('#barCta'), 'ring');
+  }
+
+  // اكتمال تحميل صورة الطبق → ظهور ناعم وإيقاف اللمعان
+  function imgDone(img) {
+    if (!img) return;
+    img.classList.add('loaded');
+    if (img.parentElement) img.parentElement.classList.add('done');
+  }
+
+  /* =========================================================
      عرض المنيو
      ========================================================= */
   function ctrlHTML(id) {
@@ -388,19 +562,20 @@
     if (!q) {
       return `<button data-action="add" data-id="${id}" class="h-11 min-w-[142px] px-4 rounded-2xl bg-rust hover:bg-rust-dark active:scale-[.96] transition text-white font-bold text-sm flex items-center justify-center gap-1.5">${SVG.plus}<span>إضافة للسلة</span></button>`;
     }
-    return `<div class="h-11 min-w-[142px] rounded-2xl bg-rust-soft border border-rust/20 flex items-center justify-between p-1 pop">
+    return `<div class="h-11 min-w-[142px] rounded-2xl bg-rust-soft border border-rust/20 flex items-center justify-between p-1 overflow-hidden">
         <button data-action="inc" data-id="${id}" class="w-9 h-9 rounded-xl bg-rust text-white grid place-items-center active:scale-90 transition" aria-label="زيادة">${SVG.plus}</button>
-        <span class="font-display font-bold text-lg text-rust-dark w-8 text-center">${q}</span>
+        <span data-qty class="inline-block font-display font-bold text-lg text-rust-dark w-8 text-center" aria-live="polite">${q}</span>
         <button data-action="dec" data-id="${id}" class="w-9 h-9 rounded-xl bg-white text-rust-dark grid place-items-center active:scale-90 transition border border-rust/20" aria-label="تقليل">${q === 1 ? SVG.trash : SVG.minus}</button>
       </div>`;
   }
 
   function renderMenu() {
     $('#menuGrid').innerHTML = MENU.map((item, idx) => `
-      <article class="bg-cream-light rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
-        <div class="relative aspect-[4/3] rounded-[20px] overflow-hidden bg-sage-soft">
-          <img src="${item.img}" alt="${item.name}" width="800" height="600" class="w-full h-full object-cover" loading="eager" fetchpriority="${idx < 2 ? 'high' : 'auto'}"
-               onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src=this.src.replace('.webp','.jpg');}else{this.style.display='none';this.nextElementSibling.classList.remove('hidden');}" />
+      <article class="reveal bg-cream-light rounded-[26px] p-2.5 shadow-card border border-sage-line/60" data-cat="${item.cat}">
+        <div class="img-wrap relative aspect-[4/3] rounded-[20px] overflow-hidden">
+          <img src="${item.img}" alt="${item.name}" width="800" height="600" class="dish-img w-full h-full object-cover" loading="eager" fetchpriority="${idx < 2 ? 'high' : 'auto'}"
+               onload="imgDone(this)"
+               onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src=this.src.replace('.webp','.jpg');}else{imgDone(this);this.style.display='none';this.nextElementSibling.classList.remove('hidden');}" />
           <div class="hidden absolute inset-0 grid place-items-center text-6xl">🍝</div>
           ${item.badge ? `<span class="absolute top-3 right-3 bg-white/95 text-rust-dark text-xs font-bold px-3 py-1.5 rounded-full shadow">${item.badge}</span>` : ''}
         </div>
@@ -416,23 +591,48 @@
       </article>`).join('');
   }
 
-  function refreshCtrl(id) {
+  // تحديث زر الكمية: الرقم يتدحرج للأعلى عند الزيادة وللأسفل عند النقص بدل إعادة الرسم
+  function refreshCtrl(id, dir = 0) {
     const el = document.querySelector(`[data-ctrl="${id}"]`);
-    if (el) el.innerHTML = ctrlHTML(id);
+    if (!el) return;
+    const q = cart[id] || 0;
+    const qtyEl = el.querySelector('[data-qty]');
+    if (q && qtyEl) {
+      qtyEl.textContent = q;
+      const dec = el.querySelector('[data-action="dec"]');
+      if (dec) dec.innerHTML = q === 1 ? SVG.trash : SVG.minus;
+      if (!REDUCED && dir) qtyEl.animate(
+        [{ transform: `translateY(${dir > 0 ? 75 : -75}%)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+        { duration: 230, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      return;
+    }
+    el.innerHTML = ctrlHTML(id);
+    if (!REDUCED && dir && el.firstElementChild) el.firstElementChild.classList.add('pop');
   }
 
   /* =========================================================
      السلة
      ========================================================= */
-  function setQty(id, q) {
+  function setQty(id, q, opts = {}) {
     const prev = cart[id] || 0;
     q = Math.max(0, Math.min(50, q));
     if (q === 0) delete cart[id]; else cart[id] = q;
     store.set(CART_KEY, cart);
-    refreshCtrl(id);
-    updateCartUI(q > prev);
+    refreshCtrl(id, Math.sign(q - prev));
+    updateCartUI(q > prev && !opts.deferBump);
     if (q > prev) track('ADD_CART', { item_ids: [id], price: byId[id].price, currency: 'SAR' });
     if (sheetOpen) {
+      // حذف صنف من الملخص: ينطوي بنعومة بدل الاختفاء المفاجئ
+      const li = q === 0 && !REDUCED ? document.querySelector(`#sheetItems [data-li="${id}"]`) : null;
+      if (li) {
+        li.style.overflow = 'hidden';
+        li.animate([
+          { opacity: 1, height: li.offsetHeight + 'px', transform: 'none' },
+          { opacity: 0, height: '0px', transform: 'translateX(40px)', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', borderWidth: '0px' }
+        ], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' })
+          .onfinish = () => { if (!cartCount()) closeSheet(); else renderSheetItems(); };
+        return;
+      }
       if (!cartCount()) { closeSheet(); return; }
       renderSheetItems();
     }
@@ -443,20 +643,18 @@
     const bar = $('#cartBar');
     bar.style.transform = count ? 'translateY(0)' : 'translateY(140%)';
     $('#barCount').textContent = count;
-    $('#barTotal').textContent = total;
+    tweenNum($('#barTotal'), total);
     const hc = $('#headerCount');
     hc.textContent = count;
     hc.classList.toggle('hidden', !count);
     hc.classList.toggle('grid', !!count);
-    if (bump) {
-      [$('#barCount'), hc].forEach(el => { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); });
-    }
-    ['#sumSubtotal', '#sumTotal', '#btnTotal'].forEach(s => { const el = $(s); if (el) el.textContent = total; });
+    if (bump) landBump();
+    ['#sumSubtotal', '#sumTotal', '#btnTotal'].forEach(s => tweenNum($(s), total));
   }
 
   function renderSheetItems() {
-    $('#sheetItems').innerHTML = cartItems().map(i => `
-      <li class="flex items-center gap-3 bg-cream-light rounded-2xl border border-sage-line p-2.5">
+    $('#sheetItems').innerHTML = cartItems().map((i, n) => `
+      <li data-li="${i.id}" style="--i:${n}" class="flex items-center gap-3 bg-cream-light rounded-2xl border border-sage-line p-2.5">
         <div class="w-14 h-14 rounded-xl overflow-hidden bg-sage-soft shrink-0 grid place-items-center text-2xl">
           <img src="${i.img}" alt="" class="w-full h-full object-cover" onerror="this.replaceWith(document.createTextNode('🍝'))" />
         </div>
@@ -480,7 +678,12 @@
     $('#checkoutView').classList.remove('hidden');
     $('#successView').classList.add('hidden');
     renderSheetItems();
+    // دخول عناصر الملخص بالتتابع عند الفتح فقط
+    const ul = $('#sheetItems');
+    replay(ul, 'enter');
+    clearTimeout(ul._t); ul._t = setTimeout(() => ul.classList.remove('enter'), 900);
     prefillCustomer();
+    updatePhoneOk();
     $('#sheet').style.transform = 'translateY(0)';
     const ov = $('#sheetOverlay');
     ov.style.opacity = '1'; ov.style.pointerEvents = 'auto';
@@ -500,6 +703,35 @@
   }
   window.addEventListener('popstate', () => { if (sheetOpen) closeSheet(true); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && sheetOpen) closeSheet(); });
+
+  // السحب للأسفل لإغلاق نافذة الطلب (سلوك مألوف في تطبيقات الجوال)
+  (function sheetDrag() {
+    const head = $('#sheetHead'), sheet = $('#sheet'), ov = $('#sheetOverlay');
+    let y0 = null, dy = 0, t0 = 0, pid = null;
+    head.addEventListener('pointerdown', e => {
+      if (!sheetOpen || e.target.closest('button')) return;
+      y0 = e.clientY; dy = 0; t0 = performance.now(); pid = e.pointerId;
+      sheet.classList.add('dragging');
+      try { head.setPointerCapture(pid); } catch (err) {}
+    });
+    head.addEventListener('pointermove', e => {
+      if (y0 === null) return;
+      dy = Math.max(0, e.clientY - y0);
+      const resist = dy > 0 ? dy : dy * 0.2;
+      sheet.style.transform = `translateY(${resist}px)`;
+      ov.style.opacity = String(Math.max(0, 1 - dy / 420));
+    });
+    const end = () => {
+      if (y0 === null) return;
+      const v = dy / Math.max(1, performance.now() - t0);   // px/ms
+      sheet.classList.remove('dragging');
+      y0 = null;
+      if (dy > 120 || (v > 0.8 && dy > 60)) { buzz(8); closeSheet(); }
+      else { sheet.style.transform = 'translateY(0)'; ov.style.opacity = '1'; }
+    };
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+  })();
 
   /* =========================================================
      النموذج والتحقق
@@ -522,7 +754,7 @@
 
   function setError(key, inputEl, show) {
     const msg = document.querySelector(`[data-err="${key}"]`);
-    if (msg) msg.classList.toggle('hidden', !show);
+    if (msg) msg.classList.toggle('on', show);
     if (inputEl) inputEl.classList.toggle('is-invalid', show);
   }
 
@@ -569,6 +801,9 @@
     let firstBad = null;
     checks.forEach(([k, el, ok]) => { setError(k, el, !ok); if (!ok && !firstBad) firstBad = el; });
     if (firstBad) {
+      // اهتزاز الحقول الناقصة + نبضة لمسية تلفت الانتباه للخطأ
+      buzz([18, 40, 18]);
+      checks.forEach(([, el, ok]) => { if (!ok) replay(el, 'shake'); });
       firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setTimeout(() => firstBad.focus({ preventScroll: true }), 300);
       return null;
@@ -592,6 +827,15 @@
 
   function toggleOther() {
     $('#otherDistrictWrap').classList.toggle('hidden', $('#fDistrict').value !== 'أخرى');
+  }
+
+  // ✓ أخضر داخل حقل الجوال بمجرد اكتمال رقم صحيح
+  function updatePhoneOk() {
+    const p = normalizePhone($('#fPhone').value);
+    const ok = /^05\d{8}$/.test(p) && !isFakePhone(p);
+    const el = $('#phoneOk');
+    if (ok && !el.classList.contains('on')) buzz(10);
+    el.classList.toggle('on', ok);
   }
 
   /* =========================================================
@@ -683,7 +927,9 @@
     $('#successOrderId').textContent = order.orderId;
     $('#waFallback').href = waUrl;
     $('#checkoutView').classList.add('hidden');
-    $('#successView').classList.remove('hidden');
+    const sv = $('#successView');
+    sv.classList.remove('hidden', 'show'); void sv.offsetWidth; sv.classList.add('show');
+    buzz([12, 60, 24]);
 
     // إعادة الزر لحالته قبل تحديث المجاميع (الزر يحتوي على #btnTotal)
     btn.disabled = false;
@@ -694,11 +940,12 @@
     const ids = Object.keys(cart);
     cart = {};
     store.set(CART_KEY, cart);
-    ids.forEach(refreshCtrl);
+    ids.forEach(id => refreshCtrl(id));
     try { updateCartUI(false); } catch (e) {}
     $('#fNotes').value = '';
 
-    window.location.href = waUrl;
+    // لحظة قصيرة يرى فيها العميل علامة النجاح قبل الانتقال لواتساب
+    setTimeout(() => { window.location.href = waUrl; }, REDUCED ? 0 : 550);
   }
 
   /* =========================================================
@@ -715,17 +962,17 @@
         b.classList.toggle('tab-active', on);
         b.classList.toggle('tab-idle', !on);
       });
-      document.querySelectorAll('#menuGrid article').forEach(card => {
-        card.classList.toggle('hidden', f !== 'all' && card.dataset.cat !== f);
-      });
+      moveTabInd(t, true);
+      applyFilter(f);
+      buzz(6);
       return;
     }
 
     const id = t.dataset.id;
     switch (t.dataset.action) {
-      case 'add': setQty(id, 1); break;
-      case 'inc': setQty(id, (cart[id] || 0) + 1); break;
-      case 'dec': setQty(id, (cart[id] || 0) - 1); break;
+      case 'add': { buzz(12); const flew = flyToCart(t); setQty(id, 1, { deferBump: flew }); break; }
+      case 'inc': { buzz(8); const flew = flyToCart(t); setQty(id, (cart[id] || 0) + 1, { deferBump: flew }); break; }
+      case 'dec': buzz(6); setQty(id, (cart[id] || 0) - 1); break;
       case 'checkout': openSheet(); break;
       case 'close-sheet': closeSheet(); break;
       case 'submit': submitOrder(); break;
@@ -736,11 +983,70 @@
   $('#fPhone').addEventListener('input', e => {
     const v = toEnDigits(e.target.value).replace(/\D/g, '').slice(0, 10);
     if (e.target.value !== v) e.target.value = v;
+    updatePhoneOk();
   });
+
+  /* =========================================================
+     التبويبات: مؤشر منزلق + تبديل ناعم للأطباق
+     ========================================================= */
+  function moveTabInd(btn, animate) {
+    const ind = $('#tabInd');
+    if (!ind || !btn || REDUCED) return;
+    if (!animate) ind.style.transition = 'none';
+    ind.style.width = btn.offsetWidth + 'px';
+    ind.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
+    if (!animate) { void ind.offsetWidth; ind.style.transition = ''; }
+  }
+
+  function applyFilter(f) {
+    const cards = [...document.querySelectorAll('#menuGrid article')];
+    const show = c => f === 'all' || c.dataset.cat === f;
+    if (REDUCED) { cards.forEach(c => c.classList.toggle('hidden', !show(c))); return; }
+    const leaving = cards.filter(c => !c.classList.contains('hidden') && !show(c));
+    const outs = leaving.map(c => c.animate(
+      [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'scale(.96)' }],
+      { duration: 150, easing: 'ease-in' }).finished.catch(() => {}));
+    Promise.all(outs).then(() => {
+      cards.forEach(c => c.classList.toggle('hidden', !show(c)));
+      cards.filter(show).forEach((c, i) => {
+        c.classList.add('in');
+        c.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }],
+          { duration: 340, delay: i * 55, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+      });
+    });
+  }
+
+  /* =========================================================
+     ظهور البطاقات عند التمرير + ظل الهيدر
+     ========================================================= */
+  function initReveal() {
+    const cards = document.querySelectorAll('#menuGrid .reveal');
+    if (REDUCED) { cards.forEach(c => c.classList.add('in')); return; }
+    const io = new IntersectionObserver(entries => {
+      entries.filter(en => en.isIntersecting).forEach((en, i) => {
+        en.target.style.setProperty('--d', (i * 80) + 'ms');
+        en.target.classList.add('in');
+        io.unobserve(en.target);
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0.08 });
+    cards.forEach(c => io.observe(c));
+  }
+
+  (function headerShadow() {
+    const h = $('#siteHeader');
+    let ticking = false;
+    addEventListener('scroll', () => {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(() => { h.classList.toggle('scrolled', scrollY > 8); ticking = false; });
+    }, { passive: true });
+  })();
   $('#fDistrict').addEventListener('change', toggleOther);
-  ['fName', 'fPhone', 'fDistrict', 'fDistrictOther'].forEach(fid => {
+  // مسح الخطأ (الإطار الأحمر + الرسالة) بمجرد أن يبدأ العميل بتصحيح الحقل
+  [['fName', 'name'], ['fPhone', 'phone'], ['fDistrict', 'district'], ['fDistrictOther', 'districtOther']].forEach(([fid, key]) => {
     const el = document.getElementById(fid);
-    el.addEventListener('input', () => el.classList.remove('is-invalid'));
+    const clear = () => { if (el.classList.contains('is-invalid')) setError(key, el, false); };
+    el.addEventListener('input', clear);
+    el.addEventListener('change', clear);
   });
   $('#payGroup').addEventListener('change', () => setError('payment', $('#payGroup'), false));
 
@@ -751,6 +1057,32 @@
   renderMenu();
   updateCartUI(false);
   if (window.lucide) lucide.createIcons();
+
+  // الصور المحمّلة من الذاكرة لا تطلق onload أحياناً → نعلّمها مباشرة، ومهلة أمان كي لا تبقى صورة مخفية أبداً
+  document.querySelectorAll('#menuGrid img').forEach(i => { if (i.complete && i.naturalWidth) imgDone(i); });
+  setTimeout(() => document.querySelectorAll('#menuGrid img').forEach(imgDone), 3500);
+
+  initReveal();
+
+  // شبكة أمان للحركة: بعد 2.5 ثانية من ظهور الصفحة فعلياً، كل محتوى الشاشة يظهر مهما حدث
+  (function motionFailsafe() {
+    if (REDUCED) return;
+    const run = () => setTimeout(() => {
+      document.documentElement.classList.add('motion-safe');
+      document.querySelectorAll('#menuGrid .reveal:not(.in)').forEach(c => {
+        const r = c.getBoundingClientRect();
+        if (r.top < innerHeight && r.bottom > 0) c.classList.add('in');
+      });
+    }, 2500);
+    if (document.visibilityState === 'visible') run();
+    else document.addEventListener('visibilitychange', function f() {
+      if (document.visibilityState === 'visible') { document.removeEventListener('visibilitychange', f); run(); }
+    });
+  })();
+
+  moveTabInd($('#tabs .tab-active'), false);
+  addEventListener('resize', () => moveTabInd($('#tabs .tab-active'), false));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => moveTabInd($('#tabs .tab-active'), false));
   </script>
 </body>
 </html>
